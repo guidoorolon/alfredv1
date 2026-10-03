@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<script src="/api/config"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#05070d">
+<title>Alfred — Asistente</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/alfred.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="sync.js" defer></script>
+<script src="topbar.js" defer></script>
+
+<style>
+/* Ajustes específicos para la página de Alfred */
+html, body {
+  height: 100%;
+}
+.alfred-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  max-width: 800px;
+  padding-bottom: calc(88px + env(safe-area-inset-bottom)); /* Espacio para bottombar */
+}
+
+/* Área superior de presentación del asistente */
+.alfred-header-chat {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 0 24px;
+  border-bottom: 1px solid rgba(0, 212, 255, 0.1);
+  margin-bottom: 24px;
+}
+.alfred-info { flex: 1; }
+.alfred-title {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--clr-text-1);
+  letter-spacing: 0.1em;
+  margin: 0 0 4px;
+}
+.alfred-subtitle {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--clr-text-3);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+/* Historial de chat */
+.chat-container {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  scrollbar-width: none;
+}
+.chat-container::-webkit-scrollbar { display: none; }
+
+/* Entrada de chat fijada abajo */
+.chat-input-area {
+  padding-top: 16px;
+  background: var(--clr-bg);
+  position: sticky;
+  bottom: 0;
+}
+</style>
+</head>
+<body>
+
+<!-- Fondo -->
+<div aria-hidden="true">
+  <div class="alfred-glow-orb orb-1"></div>
+  <div class="alfred-glow-orb orb-2"></div>
+</div>
+
+<main class="alfred-page">
+  
+  <div class="alfred-header-chat">
+    <div class="alfred-avatar idle" id="alfAvatar" aria-hidden="true">
+      <span class="alfred-avatar-letter">A</span>
+    </div>
+    <div class="alfred-info">
+      <h1 class="alfred-title">Alfred</h1>
+      <p class="alfred-subtitle">Mayordomo IA</p>
+    </div>
+  </div>
+
+  <div class="chat-container alfred-chat-feed" id="feed" role="log" aria-live="polite">
+    <!-- Mensaje inicial de Alfred -->
+    <div class="alfred-msg alfred">
+      <div class="alfred-bubble">
+        <span class="alfred-chat-tag">Alfred</span>
+        <div>A su servicio, señor German. ¿En qué le puedo asistir hoy?</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="chat-input-area">
+    <div class="alfred-composer">
+      <input id="chatInput" class="alfred-composer-input" placeholder="Pregunta a Alfred sobre tus metas, gimnasio..." autocomplete="off">
+      <button id="sendBtn" class="alfred-composer-send" aria-label="Enviar" type="button">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"></line>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+</main>
+
+<script>
+(function() {
+  'use strict';
+
+  let supabaseToken = null;
+  const feed = document.getElementById('feed');
+  const input = document.getElementById('chatInput');
+  const btn = document.getElementById('sendBtn');
+  const avatar = document.getElementById('alfAvatar');
+
+  let historial = []; // Para enviar contexto en los mensajes
+  let isBusy = false;
+
+  // Autenticación inicial
+  window.addEventListener('DOMContentLoaded', async () => {
+    if (typeof window.requireAuth === 'function') {
+      const session = await window.requireAuth();
+      if (session) {
+        supabaseToken = session.access_token;
+      }
+    }
+  });
+
+  function setAvatarState(state) {
+    avatar.className = 'alfred-avatar ' + state;
+  }
+
+  function escapeHtml(text) {
+    const map = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;' };
+    return String(text).replace(/[&<>"']/g, m => map[m]);
+  }
+
+  function renderMarkdown(text) {
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const items = [], loose = [];
+    for (const l of lines) {
+      if (/^[-*]\s+/.test(l)) {
+        items.push('<li>' + parseInline(l.replace(/^[-*]\s+/, '')) + '</li>');
+      } else {
+        loose.push(parseInline(l));
+      }
+    }
+    let html = loose.join('<br>');
+    if (items.length) {
+      html += (html ? '<br>' : '') + '<ul>' + items.join('') + '</ul>';
+    }
+    return html;
+  }
+
+  function parseInline(str) {
+    return str.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  }
+
+  function appendUserMsg(text) {
+    const el = document.createElement('div');
+    el.className = 'alfred-msg usuario';
+    el.innerHTML = '<div class="alfred-bubble">' + escapeHtml(text) + '</div>';
+    feed.appendChild(el);
+    feed.scrollTop = feed.scrollHeight;
+  }
+
+  function appendAlfredMsgHTML(htmlContent) {
+    const el = document.createElement('div');
+    el.className = 'alfred-msg alfred';
+    el.innerHTML = '<div class="alfred-bubble"><span class="alfred-chat-tag">Alfred</span><div class="content-div">' + htmlContent + '</div></div>';
+    feed.appendChild(el);
+    feed.scrollTop = feed.scrollHeight;
+    return el.querySelector('.content-div');
+  }
+
+  function getDashboardContext() {
+    const context = {};
+    const safeKeys = {
+      'goals:': 'metas',
+      'health': 'suplementos',
+      'gym': 'entrenamiento',
+      'po_water_v1': 'agua',
+      'caffeine_v1': 'cafeina'
+    };
+    
+    // Función helper para la fecha actual YYYY-MM-DD
+    function fechaActiva() {
+      const d = new Date();
+      if (d.getHours() < 6) d.setDate(d.getDate() - 1);
+      return d.toISOString().split('T')[0];
+    }
+    const hoy = fechaActiva();
+
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      for (const prefix in safeKeys) {
+        if (k.startsWith(prefix)) {
+          // Solo enviar goals del día actual para no exceder contexto
+          if (prefix === 'goals:' && k !== 'goals:' + hoy) continue;
+          
+          try {
+            const val = JSON.parse(localStorage.getItem(k));
+            context[safeKeys[prefix]] = val;
+          } catch(e) {
+            context[safeKeys[prefix]] = localStorage.getItem(k);
+          }
+        }
+      }
+    }
+    return context;
+  }
+
+  async function sendMsg(text) {
+    text = text.trim();
+    if (!text || isBusy) return;
+
+    if (!supabaseToken) {
+      appendAlfredMsgHTML('Lo siento, señor. No se pudo verificar su identidad (sesión expirada). Recargue la página.');
+      return;
+    }
+
+    isBusy = true;
+    input.value = '';
+    appendUserMsg(text);
+    historial.push({ role: 'user', content: text });
+
+    setAvatarState('thinking');
+    const contentDiv = appendAlfredMsgHTML('<span class="alfred-dots"><i></i><i></i><i></i></span>');
+
+    try {
+      const response = await fetch('/api/alfred', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: supabaseToken,
+          messages: historial,
+          contexto: getDashboardContext(),
+          modo: 'consulta'
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('API Error');
+      }
+
+      setAvatarState('speaking');
+      contentDiv.innerHTML = '';
+      let alfredFullReply = '';
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop(); // keep incomplete line
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const dataStr = line.slice(6).trim();
+            if (dataStr === '[DONE]') continue;
+            try {
+              const obj = JSON.parse(dataStr);
+              if (obj.texto) {
+                alfredFullReply += obj.texto;
+                contentDiv.innerHTML = renderMarkdown(alfredFullReply);
+                feed.scrollTop = feed.scrollHeight;
+              }
+            } catch (e) { }
+          }
+        }
+      }
+
+      historial.push({ role: 'assistant', content: alfredFullReply });
+
+    } catch(err) {
+      contentDiv.innerHTML = 'Mis disculpas, señor. He experimentado un fallo temporal de comunicación.';
+    }
+
+    isBusy = false;
+    setAvatarState('idle');
+  }
+
+  btn.addEventListener('click', () => sendMsg(input.value));
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') sendMsg(input.value);
+  });
+
+})();
+</script>
+</body>
+</html>

@@ -1,43 +1,33 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
-<script src="lock.js"></script>
 <script src="/api/config"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#050506">
 <meta name="color-scheme" content="dark">
-<title>Daily Stack — Customizable Template</title>
+<title>Alfred — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/alfred.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="sync.js" defer></script>
 <script src="topbar.js" defer></script>
 <style>
 :root {
-  --bg: #050506;
-  --bg-card: rgba(255, 255, 255, 0.04);
-  --bg-secondary: rgba(255, 255, 255, 0.035);
-  --bg-input: rgba(0, 0, 0, 0.28);
-  --bg-input-focus: rgba(0, 0, 0, 0.36);
-  --bg-dropdown: rgba(15, 15, 18, 0.96);
-
-  --border: rgba(255, 255, 255, 0.06);
-  --border-soft: rgba(255, 255, 255, 0.04);
-  --border-strong: rgba(255, 255, 255, 0.12);
-
-  --text-primary: #FAFAFA;
-  --text-secondary: #B8B6B0;
-  --text-tertiary: #76746E;
-  --text-quaternary: #4D4B47;
-
-  --accent: #1D9E75;
-  --accent-glow: rgba(29, 158, 117, 0.35);
-  --warning: #FF8A4D;
-  --warning-bg: rgba(163, 45, 45, 0.10);
-  --tag-stack: #D8AB30;
-  --tag-stack-bg: rgba(216, 171, 48, 0.15);
-
-  --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --text-primary: var(--clr-text-1);
+  --text-secondary: var(--clr-text-2);
+  --text-tertiary: var(--clr-text-3);
+  --success: var(--clr-ok);
+  --warning: var(--clr-warn);
+  --danger: var(--clr-danger);
+  --font: var(--font-body);
+  --font-mono: var(--font-mono);
+  --accent: var(--clr-cyan);
+  --bg: var(--clr-bg);
+  --surface: var(--clr-surface);
+  --line: rgba(0, 212, 255, 0.12);
 }
 
 * { box-sizing: border-box; }
@@ -174,7 +164,7 @@ main {
 }
 .stack-progress-fill {
   height: 100%; width: 0%;
-  background: #FFFFFF; border-radius: 999px;
+  background: transparent; border-radius: 999px;
   transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
@@ -338,13 +328,13 @@ main {
 .stack-ticker-dot {
   width: 8px; height: 8px;
   border-radius: 50%;
-  background: #6BE3A4;
+  background: transparent;
   flex-shrink: 0;
   transition: background 0.3s;
 }
-.stack-ticker.status-low .stack-ticker-dot { background: #FF8A4D; }
+.stack-ticker.status-low .stack-ticker-dot { background: transparent; }
 .stack-ticker.status-missed .stack-ticker-dot {
-  background: #FF6B6B;
+  background: transparent;
   animation: ticker-pulse 1.5s ease-in-out infinite;
 }
 @keyframes ticker-pulse {
@@ -520,7 +510,7 @@ main {
     }
     /* Disconnected */
     .wh-brand { display:inline-flex; align-items:center; gap:8px; }
-    .wh-brand-mark { width:22px; height:22px; border-radius:50%; background:#FFF; color:#0A0A0B; font-weight:900; font-size:12px; display:inline-flex; align-items:center; justify-content:center; letter-spacing:-0.04em; box-shadow:0 0 12px rgba(255,255,255,0.20); }
+    .wh-brand-mark { width:22px; height:22px; border-radius:50%; background: transparent; color:#0A0A0B; font-weight:900; font-size:12px; display:inline-flex; align-items:center; justify-content:center; letter-spacing:-0.04em; box-shadow:0 0 12px rgba(255,255,255,0.20); }
     .wh-brand-text { font-weight:800; font-size:13px; letter-spacing:0.18em; color:var(--text-primary); }
     .wh-disc { display:flex; flex-direction:column; align-items:center; text-align:center; padding:18px 8px 8px; gap:6px; }
     .wh-disc .wh-brand { margin-bottom:14px; }
@@ -531,7 +521,7 @@ main {
     /* Header */
     .wh-head { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:18px; flex-wrap:wrap; }
     .wh-live { display:inline-flex; align-items:center; gap:5px; font-size:9.5px; font-weight:700; letter-spacing:0.16em; text-transform:uppercase; color:#6BE3A4; margin-left:4px; padding:3px 8px; border-radius:999px; background:rgba(107,227,164,0.10); border:1px solid rgba(107,227,164,0.30); }
-    .wh-live-dot { width:6px; height:6px; border-radius:50%; background:#6BE3A4; box-shadow:0 0 8px rgba(107,227,164,0.65); animation:wh-pulse 1.6s ease-in-out infinite; }
+    .wh-live-dot { width:6px; height:6px; border-radius:50%; background: transparent; box-shadow:0 0 8px rgba(107,227,164,0.65); animation:wh-pulse 1.6s ease-in-out infinite; }
     @keyframes wh-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.85)} }
     .wh-head-right { display:flex; align-items:center; gap:10px; }
     .wh-updated { font-size:11px; color:var(--text-tertiary); font-family:var(--font-mono); }
@@ -554,14 +544,14 @@ main {
     .wh-stages-meta { font-size:11px; color:var(--text-tertiary); font-family:var(--font-mono); }
     .wh-stages-bar { display:flex; height:10px; background:rgba(255,255,255,0.04); border-radius:999px; overflow:hidden; margin-bottom:12px; border:1px solid rgba(255,255,255,0.04); }
     .wh-stage { height:100%; transition:width 0.7s cubic-bezier(0.22,1,0.36,1); }
-    .wh-stage-rem   { background:#FFF; }
-    .wh-stage-deep  { background:#B8B6B0; }
-    .wh-stage-light { background:#76746E; }
-    .wh-stage-awake { background:#38362F; }
+    .wh-stage-rem   { background: transparent; }
+    .wh-stage-deep  { background: transparent; }
+    .wh-stage-light { background: transparent; }
+    .wh-stage-awake { background: transparent; }
     .wh-stages-legend { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
     .wh-leg { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-secondary); font-weight:500; }
     .wh-leg-dot { width:8px; height:8px; border-radius:2px; flex-shrink:0; }
-    .wh-leg-dot.d-rem{background:#FFF} .wh-leg-dot.d-deep{background:#B8B6B0} .wh-leg-dot.d-light{background:#76746E} .wh-leg-dot.d-awake{background:#38362F; border:1px solid rgba(255,255,255,0.10);}
+    .wh-leg-dot.d-rem{background:#FFF} .wh-leg-dot.d-deep{background:#B8B6B0} .wh-leg-dot.d-light{background:#76746E} .wh-leg-dot.d-awake{background: transparent; border:1px solid rgba(255,255,255,0.10);}
     .wh-leg-num { margin-left:auto; color:var(--text-primary); font-weight:700; font-family:var(--font-mono); font-size:11px; }
     @media (max-width:480px) { .wh-stages-legend { grid-template-columns:repeat(2,1fr); } }
     /* Stats */
@@ -579,10 +569,10 @@ main {
     @media (max-width:380px) { .wh-bio { grid-template-columns:1fr; } }
     /* Zone dot */
     .wh-zone { position:absolute; top:9px; right:9px; width:7px; height:7px; border-radius:50%; background:rgba(255,255,255,0.12); }
-    .wh-zone.z-good { background:#6BE3A4; box-shadow:0 0 7px rgba(107,227,164,0.55); }
+    .wh-zone.z-good { background: transparent; box-shadow:0 0 7px rgba(107,227,164,0.55); }
     .wh-zone.z-norm { background:rgba(255,255,255,0.30); }
-    .wh-zone.z-warn { background:#F2C063; box-shadow:0 0 7px rgba(242,192,99,0.55); }
-    .wh-zone.z-bad  { background:#FF8A8A; box-shadow:0 0 7px rgba(255,138,138,0.55); }
+    .wh-zone.z-warn { background: transparent; box-shadow:0 0 7px rgba(242,192,99,0.55); }
+    .wh-zone.z-bad  { background: transparent; box-shadow:0 0 7px rgba(255,138,138,0.55); }
     /* Legend */
     .wh-legend { display:flex; justify-content:center; flex-wrap:wrap; gap:14px; margin-top:14px; padding:10px 12px; background:rgba(255,255,255,0.02); border-radius:999px; border:1px solid rgba(255,255,255,0.04); }
     .wh-leg-item { display:inline-flex; align-items:center; gap:6px; font-size:10.5px; font-weight:600; color:var(--text-tertiary); }
@@ -1468,5 +1458,12 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 
+<script>
+window.addEventListener('DOMContentLoaded', async () => {
+  if (typeof window.requireAuth === 'function') {
+    await window.requireAuth();
+  }
+});
+</script>
 </body>
 </html>

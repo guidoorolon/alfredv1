@@ -12,14 +12,17 @@ Contact: rowan.wisere@gmail.com
 =====================================================
 -->
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
-<script src="lock.js"></script>
 <script src="/api/config"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0a0a0b">
-<title>Water Coach</title>
+<title>Alfred — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/alfred.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="sync.js" defer></script>
 <script src="topbar.js" defer></script>
@@ -62,20 +65,18 @@ const CONFIG = {
 
 <style>
 :root {
-  --bg: #0a0a0b;
-  --bg-card: #111113;
-  --text-1: #ffffff;
-  --text-2: rgba(255,255,255,0.6);
-  --text-3: rgba(255,255,255,0.4);
-  --text-4: rgba(255,255,255,0.25);
-  --border: rgba(255,255,255,0.06);
-  --border-strong: rgba(255,255,255,0.14);
-  --good: #6ee7b7;
-  --warn: #fbbf24;
-  --bad: #ff8a8a;
-  --info: #7DD3FC;
-  --font: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
-  --font-mono: ui-monospace, SF Mono, Menlo, Consolas, monospace;
+  --text-primary: var(--clr-text-1);
+  --text-secondary: var(--clr-text-2);
+  --text-tertiary: var(--clr-text-3);
+  --success: var(--clr-ok);
+  --warning: var(--clr-warn);
+  --danger: var(--clr-danger);
+  --font: var(--font-body);
+  --font-mono: var(--font-mono);
+  --accent: var(--clr-cyan);
+  --bg: var(--clr-bg);
+  --surface: var(--clr-surface);
+  --line: rgba(0, 212, 255, 0.12);
 }
 * { box-sizing: border-box; }
 html, body {
@@ -525,13 +526,13 @@ html, body {
 <!-- Settings modal -->
 <div class="modal-bg" id="setModalBg">
   <div class="modal">
-    <h3>Settings</h3>
+    <h3>Ajustes</h3>
 
     <div class="set-section">
       <h4>Profile</h4>
       <div class="field-row">
         <div class="field">
-          <label>Weight</label>
+          <label>Peso</label>
           <input type="number" id="setWeight" step="0.5" min="20" max="300">
         </div>
         <div class="field">
@@ -586,7 +587,7 @@ html, body {
     </div>
 
     <div class="set-section">
-      <h4>Caffeine</h4>
+      <h4>Cafeína</h4>
       <div class="field">
         <label>Average caffeine per day (mg)</label>
         <input type="number" id="setCaffeine" min="0" max="1000" step="10">
@@ -624,7 +625,7 @@ html, body {
     </div>
 
     <div class="modal-actions">
-      <button class="btn-primary" id="setClose">Done</button>
+      <button class="btn-primary" id="setClose">Hecho</button>
     </div>
   </div>
 </div>
@@ -1133,5 +1134,12 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 
+<script>
+window.addEventListener('DOMContentLoaded', async () => {
+  if (typeof window.requireAuth === 'function') {
+    await window.requireAuth();
+  }
+});
+</script>
 </body>
 </html>

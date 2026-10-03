@@ -1,12 +1,15 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
-<script src="lock.js"></script>
 <script src="/api/config"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0a0a0b">
-<title>Progressive Overload Coach</title>
+<title>Alfred — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/alfred.css">
 <script src="topbar.js" defer></script>
 
 <!-- =============================================================
@@ -95,20 +98,18 @@ const CONFIG = {
 
 <style>
 :root {
-  --bg: #0a0a0b;
-  --bg-card: #111113;
-  --text-1: #ffffff;
-  --text-2: rgba(255,255,255,0.6);
-  --text-3: rgba(255,255,255,0.4);
-  --text-4: rgba(255,255,255,0.25);
-  --border: rgba(255,255,255,0.06);
-  --border-strong: rgba(255,255,255,0.14);
-  --accent: #ffffff;
-  --good: #6ee7b7;
-  --warn: #fbbf24;
-  --bad: #ff8a8a;
-  --font: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
-  --font-mono: ui-monospace, SF Mono, Menlo, Consolas, monospace;
+  --text-primary: var(--clr-text-1);
+  --text-secondary: var(--clr-text-2);
+  --text-tertiary: var(--clr-text-3);
+  --success: var(--clr-ok);
+  --warning: var(--clr-warn);
+  --danger: var(--clr-danger);
+  --font: var(--font-body);
+  --font-mono: var(--font-mono);
+  --accent: var(--clr-cyan);
+  --bg: var(--clr-bg);
+  --surface: var(--clr-surface);
+  --line: rgba(0, 212, 255, 0.12);
 }
 * { box-sizing: border-box; }
 html, body {
@@ -1140,7 +1141,7 @@ img, video, canvas, svg { max-width: 100%; }
 
 /* Camera modal */
 .wt-cam {
-  position: fixed; inset: 0; background: #000; z-index: 300;
+  position: fixed; inset: 0; background: transparent; z-index: 300;
   display: none; flex-direction: column;
 }
 .wt-cam.is-open { display: flex; }
@@ -1149,12 +1150,12 @@ img, video, canvas, svg { max-width: 100%; }
   overflow: hidden; position: relative;
 }
 .wt-cam-video {
-  width: 100%; height: 100%; object-fit: cover; background: #000;
+  width: 100%; height: 100%; object-fit: cover; background: transparent;
 }
 .wt-cam-actions {
   display: flex; align-items: center; justify-content: space-between;
   padding: 24px 28px calc(24px + env(safe-area-inset-bottom));
-  background: #000;
+  background: transparent;
 }
 .wt-cam-btn {
   background: transparent; border: none; color: var(--text-1);
@@ -1165,7 +1166,7 @@ img, video, canvas, svg { max-width: 100%; }
 }
 .wt-cam-shutter {
   width: 64px; height: 64px; border-radius: 50%;
-  background: #fff;
+  background: transparent;
   border: 4px solid rgba(255,255,255,0.3);
   box-shadow: 0 0 0 2px #fff inset;
   cursor: pointer;
@@ -1336,14 +1337,14 @@ img, video, canvas, svg { max-width: 100%; }
             <div class="wt-locked-value" id="wtLockedValue">— kg</div>
           </div>
         </div>
-        <button class="wt-edit-btn" id="wtEditBtn">Edit</button>
+        <button class="wt-edit-btn" id="wtEditBtn">Editar</button>
       </div>
 
       <div class="wt-input-row" id="wtInputRow">
         <div class="wt-input-top">
-          <input type="number" step="0.1" class="wt-input" id="wtInput" placeholder="Enter weight" inputmode="decimal" aria-label="Today's weight">
+          <input type="number" step="0.1" class="wt-input" id="wtInput" placeholder="Ingresar peso" inputmode="decimal" aria-label="Peso de hoy">
           <span class="wt-unit-static" id="wtUnitStatic">kg</span>
-          <button class="wt-save-btn" id="wtSaveBtn">Save</button>
+          <button class="wt-save-btn" id="wtSaveBtn">Guardar</button>
         </div>
       </div>
     </div>
@@ -1367,8 +1368,8 @@ img, video, canvas, svg { max-width: 100%; }
         <div class="wt-overlay-title">Progress</div>
       </div>
       <div class="wt-overlay-actions">
-        <button class="wt-overlay-action wt-overlay-primary" id="wtTakePhotoBtn">Take Photo</button>
-        <button class="wt-overlay-action wt-overlay-secondary" id="wtFromLibraryBtn">From Library</button>
+        <button class="wt-overlay-action wt-overlay-primary" id="wtTakePhotoBtn">Tomar Foto</button>
+        <button class="wt-overlay-action wt-overlay-secondary" id="wtFromLibraryBtn">De Galería</button>
       </div>
       <input type="file" id="wtFileCamera" accept="image/*" capture="environment" style="display:none">
       <input type="file" id="wtFileLibrary" accept="image/*" style="display:none">
@@ -1385,7 +1386,7 @@ img, video, canvas, svg { max-width: 100%; }
       <canvas id="wtCamCanvas" style="display:none"></canvas>
     </div>
     <div class="wt-cam-actions">
-      <button class="wt-cam-btn" id="wtCamCancel">Cancel</button>
+      <button class="wt-cam-btn" id="wtCamCancel">Cancelar</button>
       <button class="wt-cam-shutter" id="wtCamShutter" aria-label="Capture"></button>
       <button class="wt-cam-btn" id="wtCamFlip" aria-label="Flip camera">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
@@ -1406,9 +1407,9 @@ img, video, canvas, svg { max-width: 100%; }
         <div class="wt-viewer-weight" id="wtViewerWeight">—</div>
       </div>
       <div class="wt-viewer-actions">
-        <button class="wt-viewer-btn wt-viewer-compare" id="wtViewerCompare">Compare</button>
-        <button class="wt-viewer-btn wt-viewer-close" id="wtViewerClose">Close</button>
-        <button class="wt-viewer-btn wt-viewer-delete" id="wtViewerDelete">Delete</button>
+        <button class="wt-viewer-btn wt-viewer-compare" id="wtViewerCompare">Comparar</button>
+        <button class="wt-viewer-btn wt-viewer-close" id="wtViewerClose">Cerrar</button>
+        <button class="wt-viewer-btn wt-viewer-delete" id="wtViewerDelete">Eliminar</button>
       </div>
     </div>
 
@@ -1427,8 +1428,8 @@ img, video, canvas, svg { max-width: 100%; }
       <div class="wt-compare-headline" id="wtCompareHeadline">—</div>
       <div class="wt-viewer-actions">
         <button class="wt-viewer-btn wt-viewer-back" id="wtCompareBack">← Back</button>
-        <button class="wt-viewer-btn wt-viewer-close" id="wtCompareClose">Close</button>
-        <button class="wt-viewer-btn wt-viewer-delete" id="wtCompareDelete">Delete</button>
+        <button class="wt-viewer-btn wt-viewer-close" id="wtCompareClose">Cerrar</button>
+        <button class="wt-viewer-btn wt-viewer-delete" id="wtCompareDelete">Eliminar</button>
       </div>
     </div>
 
@@ -1548,7 +1549,7 @@ img, video, canvas, svg { max-width: 100%; }
 
     <!-- History -->
     <div class="po-sub-section">
-      <div class="po-sub-title">History</div>
+      <div class="po-sub-title">Historial</div>
       <div id="historyCard">
         <div class="po-empty">No logs yet.</div>
       </div>
@@ -1625,8 +1626,8 @@ img, video, canvas, svg { max-width: 100%; }
       <input type="number" id="exStep" step="0.5" value="2.5">
     </div>
     <div class="po-modal-actions">
-      <button class="po-btn-secondary" id="exModalCancel">Cancel</button>
-      <button class="po-btn-primary" id="exModalSave">Save</button>
+      <button class="po-btn-secondary" id="exModalCancel">Cancelar</button>
+      <button class="po-btn-primary" id="exModalSave">Guardar</button>
     </div>
     <span class="po-delete-link" id="exDelete" style="display:none">Delete this exercise</span>
   </div>
@@ -1643,8 +1644,8 @@ img, video, canvas, svg { max-width: 100%; }
     <div class="rot-list" id="rotList"></div>
     <button class="po-add-row-btn" id="rotAddBtn">+ Add day</button>
     <div class="po-modal-actions">
-      <button class="po-btn-secondary" id="rotCancel">Cancel</button>
-      <button class="po-btn-primary" id="rotSave">Save</button>
+      <button class="po-btn-secondary" id="rotCancel">Cancelar</button>
+      <button class="po-btn-primary" id="rotSave">Guardar</button>
     </div>
   </div>
 </div>
@@ -1652,7 +1653,7 @@ img, video, canvas, svg { max-width: 100%; }
 <!-- Settings Modal -->
 <div class="po-modal-bg" id="setModalBg">
   <div class="po-modal" style="max-width: 480px;">
-    <h3>Settings</h3>
+    <h3>Ajustes</h3>
 
     <div class="po-set-section">
       <h4>Units</h4>
@@ -1685,7 +1686,7 @@ img, video, canvas, svg { max-width: 100%; }
     </div>
 
     <div class="po-modal-actions">
-      <button class="po-btn-primary" id="setModalClose">Done</button>
+      <button class="po-btn-primary" id="setModalClose">Hecho</button>
     </div>
   </div>
 </div>
@@ -3551,11 +3552,11 @@ img, video, canvas, svg { max-width: 100%; }
                 radial-gradient(circle at 72% 82%, rgba(18,7,40,0.5), transparent 55%);
   }
   @keyframes nvspin { to { transform: rotate(360deg); } }
-  #nvFab .nv-online { position: absolute; right: 1px; bottom: 1px; z-index: 2; width: 11px; height: 11px; border-radius: 50%; background: #6ee7b7; border: 2px solid #0a0a0b; box-shadow: 0 0 6px rgba(110,231,183,0.7); }
+  #nvFab .nv-online { position: absolute; right: 1px; bottom: 1px; z-index: 2; width: 11px; height: 11px; border-radius: 50%; background: transparent; border: 2px solid #0a0a0b; box-shadow: 0 0 6px rgba(110,231,183,0.7); }
   #nvPanel {
     position: absolute; top: 72px; right: 16px; z-index: 30;
     width: min(340px, calc(100vw - 28px)); max-height: 66vh; display: none; flex-direction: column;
-    background: #111016; border: 1px solid rgba(255,255,255,0.10); border-radius: 18px;
+    background: transparent; border: 1px solid rgba(255,255,255,0.10); border-radius: 18px;
     box-shadow: 0 24px 70px rgba(0,0,0,0.65); overflow: hidden;
     font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
   }
@@ -3579,7 +3580,7 @@ img, video, canvas, svg { max-width: 100%; }
   .nv-input { flex: 1; min-width: 0; padding: 9px 12px; border-radius: 11px; border: 1px solid rgba(255,255,255,0.10); background: rgba(0,0,0,0.32); color: #FAFAFA; font-family: inherit; font-size: 13px; outline: none; }
   .nv-input::placeholder { color: #6c6a64; }
   .nv-send { border: 0; border-radius: 11px; padding: 0 14px; background: linear-gradient(180deg,#C9B8FF,#7C5CFF); color: #14081f; font-weight: 700; font-size: 15px; cursor: pointer; }
-  .nv-dots i { display:inline-block; width:5px; height:5px; margin:0 1px; border-radius:50%; background:#9b8aff; animation: nvb 1s infinite; }
+  .nv-dots i { display:inline-block; width:5px; height:5px; margin:0 1px; border-radius:50%; background: transparent; animation: nvb 1s infinite; }
   .nv-dots i:nth-child(2){animation-delay:.15s} .nv-dots i:nth-child(3){animation-delay:.3s}
   @keyframes nvb { 0%,100%{opacity:.3;transform:translateY(0)} 50%{opacity:1;transform:translateY(-3px)} }
 </style>
@@ -3587,7 +3588,7 @@ img, video, canvas, svg { max-width: 100%; }
 <div id="nvPanel" role="dialog" aria-label="Nova gym coach">
   <div class="nv-head">
     <div class="nv-av"></div>
-    <div><div class="nv-name">Nova</div><div class="nv-sub">your gym coach</div></div>
+    <div><div class="nv-name">Alfred</div><div class="nv-sub">your gym coach</div></div>
     <button class="nv-x" id="nvClose" type="button" aria-label="Close">×</button>
   </div>
   <div class="nv-body" id="nvBody"></div>
@@ -3694,5 +3695,12 @@ img, video, canvas, svg { max-width: 100%; }
 })();
 </script>
 
+<script>
+window.addEventListener('DOMContentLoaded', async () => {
+  if (typeof window.requireAuth === 'function') {
+    await window.requireAuth();
+  }
+});
+</script>
 </body>
 </html>

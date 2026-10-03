@@ -1,114 +1,56 @@
-# Dashboard — Setup Guide (fork → deploy in ~5 min)
+# Guía de Configuración — Alfred Dashboard
 
-This is a static dashboard (plain HTML/JS) that deploys on **Vercel** and syncs across your
-devices with **Supabase**. WHOOP is an optional add-on.
+Esta guía detalla los pasos para levantar el proyecto desde cero, configurar Supabase, establecer las variables de entorno en Vercel y asegurar tus datos.
 
----
+## 1. Configuración de Supabase
 
-## 1. Fork & deploy
+1. Crea un nuevo proyecto en [Supabase](https://supabase.com/).
+2. Ve a la sección **SQL Editor** y abre una **New Query**.
+3. Pega todo el contenido del archivo `supabase/schema.sql` y ejecútalo.
+   - *Nota de migración*: Si ya tenías datos de una versión anterior del dashboard, asegúrate de reemplazar `'TU-USER-UUID-AQUI'` en la sección de migración (Bloque C) con el UUID de tu usuario (que puedes ver en Authentication -> Users) ANTES de ejecutar las políticas RLS.
+4. Este script creará:
+   - Las tablas `app_state` y `reflections`.
+   - Las políticas RLS (Row Level Security) para que solo tú veas tus datos.
+   - El bucket de Storage `progress-photos` con políticas de seguridad por carpeta.
 
-1. **Fork** this repo to your GitHub.
-2. Go to **vercel.com → Add New → Project → Import** your fork.
-3. Framework Preset: **Other**. Root Directory: **`./`**. Build/output: leave blank (static).
-4. **Deploy.** You'll get a URL like `https://your-app.vercel.app`.
+## 2. Variables de Entorno en Vercel
 
-The dashboard opens to a **password screen** — the default password is in
-[`lock.js`](lock.js) (`var PASSWORD = "qwer"`). Change it to whatever you want.
+En el panel de tu proyecto en Vercel, ve a **Settings > Environment Variables** y añade las siguientes claves:
 
----
+- `SUPABASE_URL`: La URL de tu proyecto de Supabase (ej. `https://xxx.supabase.co`).
+- `SUPABASE_ANON_KEY`: La clave pública/anon de Supabase.
+- `ANTHROPIC_API_KEY`: Tu clave de la API de Anthropic (para Claude).
+- `OPENAI_API_KEY`: Tu clave de la API de OpenAI (para Whisper / transcripción de voz).
+- `ALFRED_MODEL`: (Opcional) El modelo de Claude a utilizar, por defecto `claude-opus-4-5` o el que prefieras usar de Anthropic.
 
-## 2. Supabase (cross-device sync) — required for sync
+*Importante: `SUPABASE_URL` y `SUPABASE_ANON_KEY` son leídos tanto por las funciones de `/api` (backend) como expuestos al frontend a través de `/api/config.js` para inicializar el cliente de Supabase.*
 
-Create a free project at **supabase.com**, then run **both** SQL blocks in
-**SQL Editor → New query → Run**.
+## 3. Integración con WHOOP (Opcional)
 
-### SQL #1 — `app_state` (all dashboard sync)
-```sql
-create table if not exists public.app_state (
-  key        text primary key,
-  data       jsonb not null default '{}'::jsonb,
-  updated_at timestamptz not null default now()
-);
+Si utilizas WHOOP y quieres ver tus datos de recuperación:
+1. Registra una aplicación en el portal de desarrolladores de WHOOP.
+2. Añade las siguientes variables a Vercel:
+   - `WHOOP_CLIENT_ID`
+   - `WHOOP_CLIENT_SECRET`
+   - `WHOOP_REDIRECT_URI` (ej. `https://tu-dominio.vercel.app/api/whoop-callback`)
+3. En la página de Salud (`health.html`), usa el botón de conectar.
 
--- The browser uses the ANON key, so allow it to read/write:
-alter table public.app_state enable row level security;
-create policy "anon full access app_state"
-  on public.app_state for all
-  to anon using (true) with check (true);
+## 4. Pruebas Locales (Vercel CLI)
 
--- Instant cross-device updates:
-alter publication supabase_realtime add table public.app_state;
+Si deseas probar el dashboard localmente, necesitas instalar Vercel CLI, ya que los endpoints `/api` requieren el entorno serverless:
+
+```bash
+npm install -g vercel
+vercel link
+vercel env pull .env.local
+vercel dev
 ```
 
-### SQL #2 — progress-photo sync (Storage bucket)
-Progress photos upload to a Supabase **Storage** bucket called `progress-photos` (only the
-image URLs sync through `app_state`). Skip this if you don't need photos to sync across devices.
-```sql
-insert into storage.buckets (id, name, public)
-values ('progress-photos', 'progress-photos', true)
-on conflict (id) do nothing;
+El servidor local se ejecutará típicamente en `http://localhost:3000`.
 
-create policy "anon manage progress-photos"
-  on storage.objects for all
-  to anon
-  using (bucket_id = 'progress-photos')
-  with check (bucket_id = 'progress-photos');
-```
+## 5. Fase 2: RAG de Mentores (Futuro)
 
-### Connect YOUR Supabase — pick ONE way
-Supabase → **Project Settings → API**. Copy the **Project URL** and the **anon / publishable** key.
-
-**Way A — Vercel env vars (easiest, no code edits):**
-In Vercel → **Settings → Environment Variables**, add:
-
-| Variable | Value |
-|---|---|
-| `SUPABASE_URL` | your Project URL |
-| `SUPABASE_ANON_KEY` | your anon / publishable key |
-
-Redeploy. The app reads these automatically via `/api/config`.
-
-**Way B — edit the files:**
-Replace the old URL/key in these files:
-- [`sync.js`](sync.js)
-- [`topbar.js`](topbar.js)
-- [`gym.html`](gym.html)
-
-> ⚠️ Only the **anon** key (public) is used here. **Never** put the `service_role` key in code
-> or in these env vars.
-
----
-
-## 3. WHOOP (optional)
-
-1. **developer.whoop.com** → create an app.
-2. Set its **Redirect URI** to exactly: `https://your-app.vercel.app/api/whoop-callback`
-   (use your real Vercel domain — add every domain you'll open the site from).
-3. Put your app's **Client ID** in [`health.html`](health.html) (`const CLIENT_ID = '...'`),
-   and add these in Vercel → **Settings → Environment Variables**, then redeploy:
-
-| Variable | Value |
-|---|---|
-| `WHOOP_CLIENT_ID` | your WHOOP app's Client ID |
-| `WHOOP_CLIENT_SECRET` | your WHOOP app's Client Secret (**secret**) |
-
-4. Open the site at that exact domain → Health page → **Connect WHOOP**.
-
-> The callback auto-detects the domain, so you do **not** need a `WHOOP_REDIRECT_URI` env var.
-
----
-
-## 4. Nova (AI mentor / gym coach) — optional
-
-No setup or key in the repo. Each user **pastes their own Anthropic API key** on the
-**Nova** tile; it's stored only in their browser and sent straight to Anthropic. Get a key at
-console.anthropic.com.
-
----
-
-## TL;DR
-1. Fork → import to Vercel → deploy.
-2. New Supabase → run the **SQL** above → paste your **URL + anon key** into `sync.js`,
-   `topbar.js`, `gym.html`.
-3. (Optional) WHOOP: Client ID in `health.html` + the two env vars in Vercel.
-4. Change the password in `lock.js`. Done.
+Cuando decidas implementar la base de conocimientos con mentores:
+1. Activa la extensión `vector` en Supabase (Database -> Extensions).
+2. Descomenta el **Bloque E** en `supabase/schema.sql` y ejecútalo para crear las tablas vectoriales.
+3. Actualiza `/api/alfred.js` para generar embeddings de las preguntas y buscar en los chunks.

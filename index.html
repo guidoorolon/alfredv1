@@ -1,340 +1,489 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
-<script src="lock.js"></script>
 <script src="/api/config"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#050506">
-<title>Dashboard</title>
+<meta name="theme-color" content="#05070d">
+<meta name="description" content="Alfred — Centro de control personal de German">
+<title>Alfred — Inicio</title>
+
+<!-- Fuentes Batman/HUD -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+<!-- Sistema de diseño Alfred -->
+<link rel="stylesheet" href="/assets/alfred.css">
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="sync.js" defer></script>
 <script src="topbar.js" defer></script>
 
 <style>
-/* ===== Shared design tokens (same as the rest of the dashboard) ===== */
-:root {
-  --text-primary: #FAFAFA;
-  --text-secondary: #B8B6B0;
-  --text-tertiary: #76746E;
-  --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-}
-* { box-sizing: border-box; }
-html, body {
-  margin: 0; padding: 0;
-  background: #050506;
-  color: var(--text-secondary);
-  font-family: var(--font);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-body {
-  min-height: 100vh; position: relative; overflow-x: hidden;
-  padding: max(28px, env(safe-area-inset-top)) 20px 60px;
-}
-/* Soft drifting glow + dot texture (matches the other pages). */
-body::before {
-  content: ''; position: fixed; inset: 0;
-  background:
-    radial-gradient(circle at 82% 14%, rgba(224,118,88,0.16), transparent 45%),
-    radial-gradient(circle at 18% 90%, rgba(180,180,200,0.06), transparent 50%);
-  filter: blur(40px); pointer-events: none; z-index: -2;
-  animation: drift 36s ease-in-out infinite alternate;
-}
-body::after {
-  content: ''; position: fixed; inset: 0;
-  background-image: radial-gradient(rgba(255,255,255,0.014) 1px, transparent 1px);
-  background-size: 3px 3px; pointer-events: none; z-index: -1;
-}
-@keyframes drift { 0%{transform:translate3d(0,0,0)} 100%{transform:translate3d(-22px,14px,0)} }
+/* ============================================================
+   index.html — estilos específicos de la página de inicio
+   (alfred.css maneja los tokens globales)
+   ============================================================ */
 
-.page { max-width: 1100px; margin: 0 auto; }
-.dash-title {
-  margin: 0 0 18px; font-size: 28px; font-weight: 700; letter-spacing: -0.025em;
-  background: linear-gradient(180deg, #FFFFFF 0%, #C7C4BC 120%);
-  -webkit-background-clip: text; background-clip: text;
-  -webkit-text-fill-color: transparent; color: transparent;
-}
-@media (max-width: 480px) { .dash-title { font-size: 22px; } }
-
-/* ===== BENTO GRID ===== */
-.bento {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  grid-auto-rows: 168px;
-  grid-auto-flow: dense;
-  gap: 14px;
-}
-.tile {
-  --accent: #6BE3A4;                 /* each tile overrides this */
-  position: relative; overflow: hidden;
-  display: flex; flex-direction: column;
-  padding: 20px;
-  border-radius: 18px;
-  text-decoration: none;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.06);
-  backdrop-filter: blur(24px) saturate(1.2);
-  -webkit-backdrop-filter: blur(24px) saturate(1.2);
-  box-shadow: 0 12px 40px rgba(0,0,0,0.45);
-  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
-}
-/* The "its own style" bit — a faint accent glow per tile. */
-.tile::before {
-  content: ''; position: absolute; inset: 0; pointer-events: none;
-  background: radial-gradient(circle at 78% 18%,
-              color-mix(in srgb, var(--accent) 22%, transparent), transparent 55%);
-  opacity: 0.7; transition: opacity 0.18s ease;
-}
-.tile:hover {
-  transform: translateY(-3px);
-  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
-  box-shadow: 0 16px 48px rgba(0,0,0,0.55);
-}
-.tile:hover::before { opacity: 1; }
-
-/* Tile sizes */
-.tile.big  { grid-column: span 2; grid-row: span 2; }
-.tile.wide { grid-column: span 2; }
-
-/* Tile contents */
-.tile-top { display: flex; align-items: flex-start; justify-content: space-between; }
-.tile-num {
-  font-family: var(--font-mono); font-size: 12px; font-weight: 600;
-  letter-spacing: 0.08em; color: var(--text-tertiary);
-}
-.tile-emoji {
-  font-size: 26px; line-height: 1;
-  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--accent) 60%, transparent));
-}
-.tile-spacer { flex: 1; }
-.tile-title {
-  font-size: 22px; font-weight: 700; letter-spacing: -0.02em;
-  color: var(--text-primary); margin: 0 0 4px;
-}
-.tile.big .tile-title { font-size: 28px; }
-.tile-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.tile-sub {
-  font-size: 13px; color: var(--text-tertiary);
-}
-.tile-arrow {
-  font-size: 18px; color: var(--accent);
-  transition: transform 0.18s ease; flex-shrink: 0;
-}
-.tile:hover .tile-arrow { transform: translateX(4px); }
-
-/* ===== Responsive: collapse the bento on small screens ===== */
-@media (max-width: 720px) {
-  .bento { grid-template-columns: repeat(2, 1fr); grid-auto-rows: 150px; }
-  .tile.big { grid-column: span 2; grid-row: span 1; }
-  .tile.big .tile-title { font-size: 22px; }
-}
-@media (max-width: 440px) {
-  body { padding: max(20px, env(safe-area-inset-top)) 14px 50px; }
-  .bento { grid-template-columns: 1fr; grid-auto-rows: 132px; }
-  .tile.big, .tile.wide { grid-column: span 1; }
+/* --- Encabezado principal --- */
+.hub-head {
+  margin-bottom: 28px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
-/* ===== Header row + gear ===== */
-.hub-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
-.hub-head .dash-title { margin: 0; }
-.gear-btn {
-  width: 42px; height: 42px; flex-shrink: 0;
-  display: inline-flex; align-items: center; justify-content: center;
-  border-radius: 12px; border: 1px solid rgba(255,255,255,0.10);
-  background: rgba(255,255,255,0.04); color: var(--text-secondary);
-  cursor: pointer; transition: background 0.15s, color 0.15s, transform 0.1s;
-  -webkit-tap-highlight-color: transparent;
-}
-.gear-btn:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
-.gear-btn:active { transform: scale(0.94) rotate(35deg); }
-.gear-btn svg { width: 22px; height: 22px; }
+/* Bloque del título */
+.hub-title-block {}
 
-/* ===== Settings modal ===== */
-.modal-bg {
-  position: fixed; inset: 0; z-index: 120; display: none;
-  align-items: center; justify-content: center; padding: 20px;
-  background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+.hub-bienvenida {
+  font-family: var(--font-display);
+  font-size: clamp(26px, 7vw, 48px);
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, #ffffff 0%, #8ab8d8 50%, var(--clr-cyan) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  line-height: 1.1;
+  margin: 0 0 8px;
 }
-.modal-bg.show { display: flex; }
-.modal {
-  width: 100%; max-width: 460px; max-height: 88vh; overflow-y: auto;
-  background: #0e0e10; border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 18px; padding: 22px; box-shadow: 0 24px 70px rgba(0,0,0,0.6);
+
+.hub-saludo {
+  font-family: var(--font-mono);
+  font-size: clamp(10px, 2.5vw, 13px);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--clr-text-3);
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
-.modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
-.modal-title { font-size: 18px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.01em; }
-.modal-close { border: 0; background: transparent; color: var(--text-tertiary); font-size: 26px; line-height: 1; cursor: pointer; padding: 0 4px; }
-.modal-close:hover { color: var(--text-primary); }
-.field { margin-bottom: 14px; }
-.field-label { font-size: 11px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 7px; display: block; }
-.field-row { display: flex; gap: 8px; align-items: center; }
-.set-input {
-  flex: 1; min-width: 0; padding: 11px 13px;
-  border: 1px solid rgba(255,255,255,0.08); border-radius: 11px;
-  background: rgba(0,0,0,0.3); color: var(--text-primary);
-  font-family: inherit; font-size: 14px; outline: none; transition: border-color 0.2s;
+.hub-saludo::before {
+  content: '';
+  display: inline-block;
+  width: 20px;
+  height: 1px;
+  background: var(--clr-cyan);
+  opacity: 0.5;
 }
-.set-input:focus { border-color: rgba(255,255,255,0.28); }
-.seg { display: inline-flex; border: 1px solid rgba(255,255,255,0.10); border-radius: 11px; overflow: hidden; flex-shrink: 0; }
-.seg button { border: 0; background: transparent; color: var(--text-tertiary); font-family: inherit; font-size: 13px; font-weight: 600; padding: 11px 14px; cursor: pointer; transition: background 0.15s, color 0.15s; }
-.seg button.on { background: rgba(255,255,255,0.12); color: var(--text-primary); }
-.set-save {
-  width: 100%; margin-top: 6px; padding: 13px; border: 0; border-radius: 12px;
-  background: linear-gradient(180deg,#FFFFFF,#E8E5DD); color: #0A0A0B;
-  font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 8px 22px rgba(0,0,0,0.25);
-  transition: filter 0.15s, transform 0.1s;
+
+/* Reloj en tiempo real */
+.hub-clock {
+  font-family: var(--font-mono);
+  font-size: clamp(11px, 2.5vw, 14px);
+  color: var(--clr-text-3);
+  text-align: right;
+  line-height: 1.5;
 }
-.set-save:hover { filter: brightness(1.05); }
-.set-save:active { transform: translateY(1px); }
-.set-status { text-align: center; font-size: 12px; color: var(--success); min-height: 16px; margin-top: 8px; }
-.section-divider { height: 1px; background: rgba(255,255,255,0.07); margin: 20px 0 14px; }
-.whoop-box { margin-top: 8px; padding: 16px; border-radius: 14px; background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.06); }
+.hub-clock-time {
+  font-size: clamp(18px, 4vw, 28px);
+  color: var(--clr-cyan);
+  text-shadow: 0 0 10px rgba(0,212,255,0.4);
+  display: block;
+  letter-spacing: 0.08em;
+}
+.hub-clock-date {
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+/* --- Bento tiles — rediseñados con estética Alfred --- */
+/* Colores de acento por sección */
+.tile[data-section="misiones"]     { --tile-accent: #00e5a0; }
+.tile[data-section="entrenamiento"]{ --tile-accent: #00d4ff; }
+.tile[data-section="salud"]        { --tile-accent: #a0f0c0; }
+.tile[data-section="hidratacion"]  { --tile-accent: #60c8ff; }
+.tile[data-section="finanzas"]     { --tile-accent: #f5c518; }
+.tile[data-section="cafetina"]     { --tile-accent: #c9a36b; }
+.tile[data-section="alfred"]       { --tile-accent: #9966ff; }
+.tile[data-section="reflexion"]    { --tile-accent: #6688dd; }
+.tile[data-section="avatar"]       { --tile-accent: #dd88cc; }
+
+/* Etiqueta HUD en la esquina superior derecha del tile */
+.tile-hud-tag {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--tile-accent) 60%, transparent);
+  background: color-mix(in srgb, var(--tile-accent) 8%, transparent);
+  padding: 2px 6px;
+  border-radius: 2px;
+  border: 1px solid color-mix(in srgb, var(--tile-accent) 20%, transparent);
+}
+
+/* Línea de estado por sección */
+.tile-status-line {
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--tile-accent) 60%, transparent) 0%,
+    transparent 100%);
+  margin-bottom: 12px;
+  border-radius: 1px;
+}
+
+/* Dato destacado en tile grande */
+.tile-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 6px 0;
+}
+.tile-stat-num {
+  font-family: var(--font-mono);
+  font-size: clamp(22px, 5vw, 36px);
+  color: var(--tile-accent);
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 12px color-mix(in srgb, var(--tile-accent) 50%, transparent);
+  line-height: 1;
+}
+.tile-stat-unit {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--clr-text-3);
+}
+
+/* Barra mini de progreso dentro del tile */
+.tile-mini-bar {
+  width: 100%;
+  height: 3px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: auto;
+}
+.tile-mini-fill {
+  height: 100%;
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--tile-accent) 60%, transparent),
+    var(--tile-accent));
+  border-radius: 2px;
+  box-shadow: 0 0 6px color-mix(in srgb, var(--tile-accent) 50%, transparent);
+  transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* Modal de configuración */
+.modal-section-title {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--clr-text-3);
+  margin: 20px 0 12px;
+}
+
+/* WHOOP status en el modal */
+.whoop-box {
+  padding: 14px;
+  border-radius: var(--border-radius);
+  background: rgba(255,255,255,0.02);
+  border: var(--border-panel);
+}
 .whoop-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.whoop-status { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--text-primary); }
-.whoop-status .dot { width: 8px; height: 8px; border-radius: 50%; background: #76746E; }
-.whoop-status.on .dot { background: #6BE3A4; box-shadow: 0 0 8px rgba(107,227,164,0.7); }
-.whoop-sync { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); text-align: right; }
-.whoop-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-top: 14px; }
+.whoop-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--clr-text-3);
+}
+.whoop-dot.on { background: var(--clr-ok); box-shadow: 0 0 8px rgba(0,229,160,0.7); }
+.whoop-status-text {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--clr-text-1);
+}
+.whoop-sync-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--clr-text-3);
+}
+.whoop-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 14px;
+}
 .whoop-stat { text-align: center; }
-.whoop-stat .v { font-size: 20px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; line-height: 1; }
-.whoop-stat .l { font-size: 9.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); margin-top: 5px; }
-.whoop-btn { width: 100%; margin-top: 14px; padding: 11px; border: 1px solid rgba(255,255,255,0.12); border-radius: 11px; background: transparent; color: var(--text-secondary); font-family: inherit; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; transition: background 0.15s, color 0.15s; }
-.whoop-btn:hover { background: rgba(255,255,255,0.05); color: var(--text-primary); }
+.whoop-stat .v {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--clr-text-1);
+  font-variant-numeric: tabular-nums;
+  display: block;
+  line-height: 1;
+}
+.whoop-stat .l {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--clr-text-3);
+  margin-top: 5px;
+  display: block;
+}
+
+/* Botón acción WHOOP */
+.whoop-btn {
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px;
+  border: var(--border-panel);
+  border-radius: var(--border-radius);
+  background: transparent;
+  color: var(--clr-text-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.whoop-btn:hover { border-color: rgba(0,212,255,0.3); color: var(--clr-cyan); }
 </style>
 </head>
 <body>
-<div class="page">
 
-  <div class="hub-head">
-    <h1 class="dash-title">Rowans Dashboard</h1>
-    <button class="gear-btn" id="settingsOpen" type="button" aria-label="Settings">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="3"/>
-        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-      </svg>
-    </button>
-  </div>
-
-  <div class="bento">
-
-    <!-- Big tile -->
-    <a class="tile big" href="main.html" style="--accent:#6BE3A4">
-      <div class="tile-top">
-        <span class="tile-num">·01</span>
-        <span class="tile-emoji">🏠</span>
-      </div>
-      <div class="tile-spacer"></div>
-      <h2 class="tile-title">Main</h2>
-      <div class="tile-foot">
-        <span class="tile-sub">Goals & daily plan</span>
-        <span class="tile-arrow">→</span>
-      </div>
-    </a>
-
-    <!-- Wide tile -->
-    <a class="tile wide" href="gym.html" style="--accent:#7DD3FC">
-      <div class="tile-top">
-        <span class="tile-num">·02</span>
-        <span class="tile-emoji">💪</span>
-      </div>
-      <div class="tile-spacer"></div>
-      <h2 class="tile-title">Fitness</h2>
-      <div class="tile-foot">
-        <span class="tile-sub">Workouts, splits, sessions</span>
-        <span class="tile-arrow">→</span>
-      </div>
-    </a>
-
-    <!-- Small tile -->
-    <a class="tile" href="health.html" style="--accent:#A7F3D0">
-      <div class="tile-top">
-        <span class="tile-num">·03</span>
-        <span class="tile-emoji">💊</span>
-      </div>
-      <div class="tile-spacer"></div>
-      <h2 class="tile-title">Health</h2>
-      <div class="tile-foot">
-        <span class="tile-sub">Supplements & vitals</span>
-        <span class="tile-arrow">→</span>
-      </div>
-    </a>
-
-    <!-- Small tile -->
-    <a class="tile" href="po-water.html" style="--accent:#60A5FA">
-      <div class="tile-top">
-        <span class="tile-num">·04</span>
-        <span class="tile-emoji">💧</span>
-      </div>
-      <div class="tile-spacer"></div>
-      <h2 class="tile-title">Water</h2>
-      <div class="tile-foot">
-        <span class="tile-sub">Hydration</span>
-        <span class="tile-arrow">→</span>
-      </div>
-    </a>
-
-    <!-- Wide tile -->
-    <a class="tile wide" href="finance.html" style="--accent:#F2C063">
-      <div class="tile-top">
-        <span class="tile-num">·05</span>
-        <span class="tile-emoji">📊</span>
-      </div>
-      <div class="tile-spacer"></div>
-      <h2 class="tile-title">Finance</h2>
-      <div class="tile-foot">
-        <span class="tile-sub">Net worth & spending</span>
-        <span class="tile-arrow">→</span>
-      </div>
-    </a>
-
-    <!-- Small tile -->
-    <a class="tile" href="caffeine.html" style="--accent:#C9A36B">
-      <div class="tile-top">
-        <span class="tile-num">·06</span>
-        <span class="tile-emoji">☕</span>
-      </div>
-      <div class="tile-spacer"></div>
-      <h2 class="tile-title">Caffeine</h2>
-      <div class="tile-foot">
-        <span class="tile-sub">Intake & timing</span>
-        <span class="tile-arrow">→</span>
-      </div>
-    </a>
-
-    <!-- Wide tile -->
-    <a class="tile wide" href="nova-lite.html" style="--accent:#A78BFA">
-      <div class="tile-top">
-        <span class="tile-num">·07</span>
-        <span class="tile-emoji">🧠</span>
-      </div>
-      <div class="tile-spacer"></div>
-      <h2 class="tile-title">Nova</h2>
-      <div class="tile-foot">
-        <span class="tile-sub">Your AI mentor</span>
-        <span class="tile-arrow">→</span>
-      </div>
-    </a>
-
-  </div>
+<!-- Decoraciones de fondo -->
+<div aria-hidden="true">
+  <div class="alfred-glow-orb orb-1"></div>
+  <div class="alfred-glow-orb orb-2"></div>
 </div>
+<canvas id="alfredRain" aria-hidden="true"></canvas>
 
-<!-- ===== Settings / Your Data ===== -->
-<div class="modal-bg" id="settingsBg">
-  <div class="modal" role="dialog" aria-label="Your data">
-    <div class="modal-head">
-      <span class="modal-title">Your Data</span>
-      <button class="modal-close" id="settingsClose" type="button" aria-label="Close">×</button>
+<!-- Contenido principal -->
+<main class="alfred-page" id="alfredPage">
+
+  <!-- === Encabezado "Bienvenido, German" === -->
+  <div class="hub-head">
+    <div class="hub-title-block">
+      <h1 class="hub-bienvenida" id="hubTitulo">Bienvenido, German</h1>
+      <p class="hub-saludo" id="hubSaludo">Buenas noches, la ciudad nunca duerme</p>
     </div>
 
-    <div class="field">
-      <label class="field-label">Height</label>
-      <div class="field-row">
-        <input class="set-input" id="heightA" type="number" min="0" inputmode="decimal" placeholder="cm">
-        <input class="set-input" id="heightB" type="number" min="0" inputmode="decimal" placeholder="in" style="display:none">
+    <!-- Reloj + botón configuración -->
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="hub-clock" aria-live="polite" aria-label="Hora actual">
+        <span class="hub-clock-time" id="hubHora">--:--</span>
+        <span class="hub-clock-date" id="hubFecha">---</span>
+      </div>
+      <button class="tb-icon-btn" id="settingsOpen" type="button" aria-label="Configuración">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- === Bento Grid de módulos === -->
+  <section class="bento" aria-label="Módulos del sistema">
+
+    <!-- 01 · Misiones (Metas y tareas) — grande -->
+    <a class="tile big hud-panel alfred-fade-in" href="main.html" data-section="misiones" aria-label="Ir a Misiones">
+      <div class="hud-status-bar" aria-hidden="true"></div>
+      <div class="hud-corners" aria-hidden="true"></div>
+      <div class="tile-top">
+        <span class="tile-num">·01</span>
+        <span class="tile-hud-tag">ACTIVO</span>
+      </div>
+      <span class="tile-icon" aria-hidden="true">⚡</span>
+      <div class="tile-body">
+        <h2 class="tile-title">Misiones</h2>
+        <p class="tile-sub">Metas · Tareas · Plan diario</p>
+        <div class="tile-stat">
+          <span class="tile-stat-num" id="tileGoalsDone">—</span>
+          <span class="tile-stat-unit">completadas</span>
+        </div>
+        <div class="tile-mini-bar" aria-hidden="true">
+          <div class="tile-mini-fill" id="tileGoalsBar" style="width:0%"></div>
+        </div>
+      </div>
+      <div class="tile-foot">
+        <span class="tile-sub" id="tileGoalsSub">Cargando…</span>
+        <span class="tile-arrow" aria-hidden="true">→</span>
+      </div>
+    </a>
+
+    <!-- 02 · Entrenamiento — ancho -->
+    <a class="tile wide hud-panel alfred-fade-in" href="gym.html" data-section="entrenamiento" aria-label="Ir a Entrenamiento">
+      <div class="hud-status-bar" aria-hidden="true"></div>
+      <div class="hud-corners" aria-hidden="true"></div>
+      <div class="tile-top">
+        <span class="tile-num">·02</span>
+        <span class="tile-hud-tag">GYM</span>
+      </div>
+      <span class="tile-icon" aria-hidden="true">🏋</span>
+      <div class="tile-body">
+        <h2 class="tile-title">Entrenamiento</h2>
+        <p class="tile-sub">Sobrecarga progresiva · Splits · Sesiones</p>
+      </div>
+      <div class="tile-foot">
+        <span class="tile-sub">Rendimiento físico</span>
+        <span class="tile-arrow" aria-hidden="true">→</span>
+      </div>
+    </a>
+
+    <!-- 03 · Salud -->
+    <a class="tile hud-panel alfred-fade-in" href="health.html" data-section="salud" aria-label="Ir a Salud">
+      <div class="hud-status-bar" aria-hidden="true"></div>
+      <div class="hud-corners" aria-hidden="true"></div>
+      <div class="tile-top">
+        <span class="tile-num">·03</span>
+        <span class="tile-hud-tag">SALUD</span>
+      </div>
+      <span class="tile-icon" aria-hidden="true">💊</span>
+      <div class="tile-body">
+        <h2 class="tile-title">Salud</h2>
+        <p class="tile-sub" id="tileHealthSub">Suplementos · WHOOP</p>
+      </div>
+      <div class="tile-foot">
+        <span class="tile-arrow" aria-hidden="true">→</span>
+      </div>
+    </a>
+
+    <!-- 04 · Hidratación -->
+    <a class="tile hud-panel alfred-fade-in" href="po-water.html" data-section="hidratacion" aria-label="Ir a Hidratación">
+      <div class="hud-status-bar" aria-hidden="true"></div>
+      <div class="hud-corners" aria-hidden="true"></div>
+      <div class="tile-top">
+        <span class="tile-num">·04</span>
+        <span class="tile-hud-tag">H₂O</span>
+      </div>
+      <span class="tile-icon" aria-hidden="true">💧</span>
+      <div class="tile-body">
+        <h2 class="tile-title">Hidratación</h2>
+        <div class="tile-stat">
+          <span class="tile-stat-num" id="tileWaterDone">—</span>
+          <span class="tile-stat-unit" id="tileWaterUnit">/—</span>
+        </div>
+      </div>
+      <div class="tile-foot">
+        <div class="tile-mini-bar" style="width:80%" aria-hidden="true">
+          <div class="tile-mini-fill" id="tileWaterBar" style="width:0%"></div>
+        </div>
+        <span class="tile-arrow" aria-hidden="true">→</span>
+      </div>
+    </a>
+
+    <!-- 05 · Finanzas — ancho -->
+    <a class="tile wide hud-panel alfred-fade-in" href="finance.html" data-section="finanzas" aria-label="Ir a Finanzas">
+      <div class="hud-status-bar" aria-hidden="true"></div>
+      <div class="hud-corners" aria-hidden="true"></div>
+      <div class="tile-top">
+        <span class="tile-num">·05</span>
+        <span class="tile-hud-tag">FINANZAS</span>
+      </div>
+      <span class="tile-icon" aria-hidden="true">📊</span>
+      <div class="tile-body">
+        <h2 class="tile-title">Finanzas</h2>
+        <p class="tile-sub">Patrimonio neto · Gastos · Ingresos</p>
+      </div>
+      <div class="tile-foot">
+        <span class="tile-sub">Control financiero</span>
+        <span class="tile-arrow" aria-hidden="true">→</span>
+      </div>
+    </a>
+
+    <!-- 06 · Cafeína -->
+    <a class="tile hud-panel alfred-fade-in" href="caffeine.html" data-section="cafetina" aria-label="Ir a Cafeína">
+      <div class="hud-status-bar" aria-hidden="true"></div>
+      <div class="hud-corners" aria-hidden="true"></div>
+      <div class="tile-top">
+        <span class="tile-num">·06</span>
+        <span class="tile-hud-tag">CAFÉ</span>
+      </div>
+      <span class="tile-icon" aria-hidden="true">☕</span>
+      <div class="tile-body">
+        <h2 class="tile-title">Cafeína</h2>
+        <p class="tile-sub">Consumo · Timing · Tolerancia</p>
+      </div>
+      <div class="tile-foot">
+        <span class="tile-arrow" aria-hidden="true">→</span>
+      </div>
+    </a>
+
+    <!-- 07 · Alfred IA — ancho -->
+    <a class="tile wide hud-panel alfred-fade-in" href="alfred.html" data-section="alfred" aria-label="Ir a Alfred IA">
+      <div class="hud-status-bar" aria-hidden="true"></div>
+      <div class="hud-corners" aria-hidden="true"></div>
+      <div class="tile-top">
+        <span class="tile-num">·07</span>
+        <span class="tile-hud-tag">IA</span>
+      </div>
+      <span class="tile-icon" aria-hidden="true">🦇</span>
+      <div class="tile-body">
+        <h2 class="tile-title">Alfred</h2>
+        <p class="tile-sub">Mayordomo · Consejero · Mentor IA</p>
+      </div>
+      <div class="tile-foot">
+        <span class="tile-sub">Tu asistente personal</span>
+        <span class="tile-arrow" aria-hidden="true">→</span>
+      </div>
+    </a>
+
+    <!-- 08 · Reflexión -->
+    <a class="tile hud-panel alfred-fade-in" href="reflexion.html" data-section="reflexion" aria-label="Ir a Reflexión">
+      <div class="hud-status-bar" aria-hidden="true"></div>
+      <div class="hud-corners" aria-hidden="true"></div>
+      <div class="tile-top">
+        <span class="tile-num">·08</span>
+        <span class="tile-hud-tag">DIARIO</span>
+      </div>
+      <span class="tile-icon" aria-hidden="true">🌙</span>
+      <div class="tile-body">
+        <h2 class="tile-title">Reflexión</h2>
+        <p class="tile-sub">Voz · Texto · Historial</p>
+      </div>
+      <div class="tile-foot">
+        <span class="tile-arrow" aria-hidden="true">→</span>
+      </div>
+    </a>
+
+    <!-- 09 · Avatar Lab -->
+    <a class="tile hud-panel alfred-fade-in" href="avatar-lab.html" data-section="avatar" aria-label="Ir a Avatar Lab">
+      <div class="hud-status-bar" aria-hidden="true"></div>
+      <div class="hud-corners" aria-hidden="true"></div>
+      <div class="tile-top">
+        <span class="tile-num">·09</span>
+        <span class="tile-hud-tag">FÍSICO</span>
+      </div>
+      <span class="tile-icon" aria-hidden="true">🪞</span>
+      <div class="tile-body">
+        <h2 class="tile-title">Avatar Lab</h2>
+        <p class="tile-sub">Fotos de progreso</p>
+      </div>
+      <div class="tile-foot">
+        <span class="tile-arrow" aria-hidden="true">→</span>
+      </div>
+    </a>
+
+  </section><!-- /bento -->
+</main>
+
+<!-- === Modal de configuración === -->
+<div class="modal-bg" id="settingsBg" role="dialog" aria-modal="true" aria-label="Configuración de tu perfil">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="modal-title">Tu Perfil</span>
+      <button class="modal-close" id="settingsClose" type="button" aria-label="Cerrar">×</button>
+    </div>
+
+    <!-- Datos personales -->
+    <div class="modal-section-title">Datos personales</div>
+
+    <div class="login-field mb-sm" style="margin-bottom:12px">
+      <label class="hud-field-label" for="heightA">Estatura</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input class="hud-input" id="heightA" type="number" min="0" inputmode="decimal" placeholder="cm" style="flex:1">
+        <input class="hud-input" id="heightB" type="number" min="0" inputmode="decimal" placeholder="in" style="flex:1;display:none">
         <div class="seg" id="heightUnitSeg">
           <button type="button" data-u="cm" class="on">cm</button>
           <button type="button" data-u="ft">ft/in</button>
@@ -342,10 +491,10 @@ body::after {
       </div>
     </div>
 
-    <div class="field">
-      <label class="field-label">Weight</label>
-      <div class="field-row">
-        <input class="set-input" id="weight" type="number" min="0" inputmode="decimal" placeholder="weight">
+    <div style="margin-bottom:12px">
+      <label class="hud-field-label" for="weight">Peso</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input class="hud-input" id="weight" type="number" min="0" inputmode="decimal" placeholder="peso" style="flex:1">
         <div class="seg" id="weightUnitSeg">
           <button type="button" data-u="kg" class="on">kg</button>
           <button type="button" data-u="lb">lb</button>
@@ -353,67 +502,183 @@ body::after {
       </div>
     </div>
 
-    <div class="field">
-      <label class="field-label">Age</label>
-      <input class="set-input" id="age" type="number" min="0" inputmode="numeric" placeholder="years">
+    <div style="margin-bottom:12px">
+      <label class="hud-field-label" for="age">Edad</label>
+      <input class="hud-input" id="age" type="number" min="0" inputmode="numeric" placeholder="años">
     </div>
 
-    <div class="field">
-      <label class="field-label">Sex</label>
+    <div style="margin-bottom:12px">
+      <label class="hud-field-label">Sexo</label>
       <div class="seg" id="sexSeg" style="width:100%;display:flex">
-        <button type="button" data-s="m" style="flex:1">Male</button>
-        <button type="button" data-s="f" style="flex:1">Female</button>
+        <button type="button" data-s="m" style="flex:1" class="on">Masculino</button>
+        <button type="button" data-s="f" style="flex:1">Femenino</button>
       </div>
     </div>
 
-    <div class="field">
-      <label class="field-label">Active hours / week</label>
-      <input class="set-input" id="activity" type="number" min="0" inputmode="decimal" placeholder="e.g. 5">
+    <div style="margin-bottom:12px">
+      <label class="hud-field-label" for="activity">Horas de actividad / semana</label>
+      <input class="hud-input" id="activity" type="number" min="0" inputmode="decimal" placeholder="ej. 5">
     </div>
 
-    <button class="set-save" id="settingsSave" type="button">Save</button>
-    <div class="set-status" id="settingsStatus"></div>
+    <button class="btn btn-primary btn-full" id="settingsSave" type="button">Guardar</button>
+    <div style="min-height:18px;margin-top:10px;text-align:center;font-family:var(--font-mono);font-size:11px" id="settingsStatus" role="alert" aria-live="polite"></div>
 
-    <div class="section-divider"></div>
+    <div class="alfred-divider"></div>
 
-    <label class="field-label">WHOOP</label>
+    <!-- WHOOP -->
+    <div class="modal-section-title">WHOOP</div>
     <div class="whoop-box">
       <div class="whoop-row">
-        <span class="whoop-status" id="whStatus"><span class="dot"></span><span id="whStatusText">Not connected</span></span>
-        <span class="whoop-sync" id="whSync"></span>
+        <span class="whoop-status-text" id="whStatus">
+          <span class="whoop-dot" id="whDot"></span>
+          <span id="whStatusText">No conectado</span>
+        </span>
+        <span class="whoop-sync-label" id="whSync"></span>
       </div>
       <div class="whoop-stats" id="whStats" style="display:none">
-        <div class="whoop-stat"><div class="v" id="whRec">—</div><div class="l">Recovery</div></div>
-        <div class="whoop-stat"><div class="v" id="whSleep">—</div><div class="l">Sleep</div></div>
-        <div class="whoop-stat"><div class="v" id="whRhr">—</div><div class="l">Rest HR</div></div>
+        <div class="whoop-stat"><span class="v" id="whRec">—</span><span class="l">Recuperación</span></div>
+        <div class="whoop-stat"><span class="v" id="whSleep">—</span><span class="l">Sueño</span></div>
+        <div class="whoop-stat"><span class="v" id="whRhr">—</span><span class="l">FC Reposo</span></div>
       </div>
-      <button class="whoop-btn" id="whAction" type="button">Sync now</button>
+      <button class="whoop-btn" id="whAction" type="button">Sincronizar ahora</button>
     </div>
   </div>
 </div>
 
+<!-- Lluvia en canvas -->
+<canvas id="alfredRain" aria-hidden="true"></canvas>
+
 <script>
 (function () {
   'use strict';
-  const $ = (id) => document.getElementById(id);
-  const WATER_KEY = 'po_water_v1';
-  const WHOOP_KEY = 'whoop_tokens_v1';
-  const SYNC_KEY  = 'whoop_last_sync';
 
-  function loadJSON(k, f) { try { return JSON.parse(localStorage.getItem(k)) || f; } catch (e) { return f; } }
-  function saveJSON(k, v) { localStorage.setItem(k, JSON.stringify(v)); }
+  // ---- Verificar sesión (redirigir si no está logueado) ----
+  window.addEventListener('DOMContentLoaded', async () => {
+    if (typeof window.requireAuth === 'function') {
+      const sess = await window.requireAuth();
+      if (!sess) return; // requireAuth redirige solo
+    }
+  });
 
-  // Mirror of topbar.js defaultWaterState so we never clobber the water tracker.
-  function defaultWater() {
-    return { unit:'bottle', bottleMl:500, glassMl:250, weightUnit:'kg',
-      profile:{ weightKg:75, age:25, sex:'m', activityHrsPerWeek:5 },
-      caffeineMgPerDay:200, substances:[], logs:{} };
+  // ---- Reloj en tiempo real ----
+  const DIAS_ES  = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+  const MESES_ES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+  function saludoPorHora(h) {
+    if (h >= 5  && h < 12) return 'Buenos días, la Batcomputadora está lista';
+    if (h >= 12 && h < 14) return 'Buenas tardes, señor German';
+    if (h >= 14 && h < 20) return 'Buenas tardes, la vigilancia continúa';
+    if (h >= 20 && h < 24) return 'Buenas noches, la ciudad nunca duerme';
+    return 'Buenas noches, señor. La oscuridad protege';
   }
 
-  /* ---------- unit state ---------- */
-  let heightUnit = 'cm';   // 'cm' | 'ft'
-  let weightUnit = 'kg';   // 'kg' | 'lb'
-  let sex = 'm';
+  function actualizarReloj() {
+    const ahora = new Date();
+    const h   = ahora.getHours();
+    const m   = String(ahora.getMinutes()).padStart(2, '0');
+    const s   = String(ahora.getSeconds()).padStart(2, '0');
+    const dia = DIAS_ES[ahora.getDay()];
+    const num = ahora.getDate();
+    const mes = MESES_ES[ahora.getMonth()];
+    const año = ahora.getFullYear();
+
+    const horaEl   = document.getElementById('hubHora');
+    const fechaEl  = document.getElementById('hubFecha');
+    const saludoEl = document.getElementById('hubSaludo');
+
+    if (horaEl)  horaEl.textContent  = String(h).padStart(2,'0') + ':' + m + ':' + s;
+    if (fechaEl) fechaEl.textContent = dia + ' · ' + num + ' ' + mes + ' ' + año;
+    if (saludoEl && !saludoEl.dataset.override) {
+      saludoEl.textContent = saludoPorHora(h);
+    }
+  }
+  actualizarReloj();
+  setInterval(actualizarReloj, 1000);
+
+  // ---- Animaciones de entrada con IntersectionObserver ----
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((e, i) => {
+      if (e.isIntersecting) {
+        setTimeout(() => e.target.classList.add('visible'), i * 60);
+        observer.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.05 });
+
+  document.querySelectorAll('.alfred-fade-in').forEach(el => observer.observe(el));
+
+  // ---- Leer datos de localStorage para los tiles ----
+  function fechaActiva() {
+    const now = new Date();
+    const d   = new Date(now);
+    if (now.getHours() < 6) d.setDate(d.getDate() - 1);
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+  function fechaHoy() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+  function cargarJSON(k, def) {
+    try { return JSON.parse(localStorage.getItem(k)) || def; } catch(e) { return def; }
+  }
+
+  function actualizarTiles() {
+    // --- Misiones (goals) ---
+    const goals   = cargarJSON('goals:' + fechaActiva(), []);
+    const total   = Array.isArray(goals) ? goals.length : 0;
+    const hechas  = total ? goals.filter(g => g && g.done).length : 0;
+    const pct     = total > 0 ? Math.round(hechas/total*100) : 0;
+
+    const gDone = document.getElementById('tileGoalsDone');
+    const gBar  = document.getElementById('tileGoalsBar');
+    const gSub  = document.getElementById('tileGoalsSub');
+    if (gDone) gDone.textContent = total ? (hechas + '/' + total) : '0';
+    if (gBar)  gBar.style.width  = pct + '%';
+    if (gSub)  gSub.textContent  = total
+      ? (pct === 100 ? '✓ Misiones completadas' : pct + '% completado')
+      : 'Sin misiones hoy';
+
+    // --- Agua ---
+    const agua   = cargarJSON('po_water_v1', null);
+    const wHecho = agua ? ((agua.logs || {})[fechaHoy()] || 0) : 0;
+    const wTotal = agua ? (function(){
+      const p   = agua.profile || { weightKg: 75 };
+      const wKg = agua.weightUnit === 'lb' ? (p.weightKg||0)/2.20462 : (p.weightKg||0);
+      const ml  = wKg*35 + (p.activityHrsPerWeek||0)/7*500;
+      const uv  = agua.unit==='glass' ? (agua.glassMl||250) : agua.unit==='oz' ? 30 : agua.unit==='ml' ? 1 : (agua.bottleMl||500);
+      return Math.max(1, Math.ceil(ml/uv));
+    })() : 0;
+    const wPct   = wTotal > 0 ? Math.round(wHecho/wTotal*100) : 0;
+
+    const wDone = document.getElementById('tileWaterDone');
+    const wUnit = document.getElementById('tileWaterUnit');
+    const wBar  = document.getElementById('tileWaterBar');
+    if (wDone) wDone.textContent = wHecho;
+    if (wUnit) wUnit.textContent = '/' + (wTotal || '—');
+    if (wBar)  wBar.style.width  = Math.min(wPct, 100) + '%';
+
+    // --- Suplementos ---
+    const items = cargarJSON('stack:items', []);
+    const taken = cargarJSON('stack:taken:' + fechaActiva(), {});
+    const sTotal = Array.isArray(items) ? items.length : 0;
+    const sHecho = sTotal ? items.filter(i => i && taken[i.id]).length : 0;
+    const healthSub = document.getElementById('tileHealthSub');
+    if (healthSub) healthSub.textContent = sTotal
+      ? sHecho + '/' + sTotal + ' suplementos · WHOOP'
+      : 'Suplementos · WHOOP';
+  }
+  actualizarTiles();
+
+  // Actualizar cuando cambia localStorage (desde otra pestaña o sync)
+  window.addEventListener('storage', actualizarTiles);
+  window.addEventListener('focus',   actualizarTiles);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) actualizarTiles(); });
+
+  // ---- Modal de configuración ----
+  const $ = (id) => document.getElementById(id);
+
+  let heightUnit = 'cm', weightUnit = 'kg', sex = 'm';
+  const WATER_KEY = 'po_water_v1', WHOOP_KEY = 'whoop_tokens_v1', SYNC_KEY = 'whoop_last_sync';
 
   function setHeightUnit(u) {
     heightUnit = u;
@@ -430,141 +695,173 @@ body::after {
     sex = s;
     $('sexSeg').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.s === s));
   }
-
   function getHeightCm() {
     if (heightUnit === 'cm') { const v = parseFloat($('heightA').value); return v > 0 ? v : null; }
-    const ft = parseFloat($('heightA').value) || 0;
-    const inch = parseFloat($('heightB').value) || 0;
-    const cm = ft * 30.48 + inch * 2.54;
-    return cm > 0 ? Math.round(cm) : null;
+    const ft = parseFloat($('heightA').value)||0, inch = parseFloat($('heightB').value)||0;
+    const cm = ft*30.48 + inch*2.54; return cm > 0 ? Math.round(cm) : null;
   }
   function fillHeight(cm) {
-    if (!cm) { $('heightA').value = ''; $('heightB').value = ''; return; }
-    if (heightUnit === 'cm') { $('heightA').value = Math.round(cm); }
-    else { const totalIn = cm / 2.54; $('heightA').value = Math.floor(totalIn / 12); $('heightB').value = Math.round(totalIn % 12); }
+    if (!cm) { $('heightA').value=''; $('heightB').value=''; return; }
+    if (heightUnit==='cm') { $('heightA').value = Math.round(cm); }
+    else { const ti=cm/2.54; $('heightA').value=Math.floor(ti/12); $('heightB').value=Math.round(ti%12); }
   }
 
-  /* ---------- load existing profile into the form ---------- */
-  function populate() {
-    const w = loadJSON(WATER_KEY, defaultWater());
+  function defaultWater() {
+    return { unit:'bottle',bottleMl:500,glassMl:250,weightUnit:'kg',
+      profile:{ weightKg:75, age:25, sex:'m', activityHrsPerWeek:5 },
+      caffeineMgPerDay:200, substances:[], logs:{} };
+  }
+
+  function poblarForm() {
+    const w = cargarJSON(WATER_KEY, defaultWater());
     const p = w.profile || {};
     setWeightUnit(w.weightUnit === 'lb' ? 'lb' : 'kg');
     setHeightUnit(p.heightUnit === 'ft' ? 'ft' : 'cm');
     setSex(p.sex === 'f' ? 'f' : 'm');
     fillHeight(p.heightCm || null);
-    if (p.weightKg) $('weight').value = weightUnit === 'lb' ? Math.round(p.weightKg * 2.20462) : Math.round(p.weightKg);
-    else $('weight').value = '';
+    if (p.weightKg) $('weight').value = weightUnit==='lb' ? Math.round(p.weightKg*2.20462) : Math.round(p.weightKg);
+    else $('weight').value='';
     $('age').value = p.age || '';
-    $('activity').value = (p.activityHrsPerWeek != null ? p.activityHrsPerWeek : '');
+    $('activity').value = (p.activityHrsPerWeek!=null ? p.activityHrsPerWeek : '');
   }
-
-  /* ---------- save back into po_water_v1 (merge, never overwrite logs) ---------- */
-  function save() {
-    const w = loadJSON(WATER_KEY, defaultWater());
+  function guardar() {
+    const w = cargarJSON(WATER_KEY, defaultWater());
     w.profile = w.profile || {};
     const cm = getHeightCm();
-    if (cm) { w.profile.heightCm = cm; w.profile.heightUnit = heightUnit; }
+    if (cm) { w.profile.heightCm=cm; w.profile.heightUnit=heightUnit; }
     const wv = parseFloat($('weight').value);
-    if (wv > 0) { w.profile.weightKg = weightUnit === 'lb' ? +(wv / 2.20462).toFixed(1) : wv; w.weightUnit = weightUnit; }
-    const age = parseInt($('age').value, 10); if (age > 0) w.profile.age = age;
-    w.profile.sex = sex;
-    const act = parseFloat($('activity').value); if (act >= 0 && !isNaN(act)) w.profile.activityHrsPerWeek = act;
-    saveJSON(WATER_KEY, w);
-    const s = $('settingsStatus'); s.textContent = 'Saved ✓';
-    setTimeout(() => { s.textContent = ''; }, 1800);
+    if (wv>0) { w.profile.weightKg=weightUnit==='lb'?+(wv/2.20462).toFixed(1):wv; w.weightUnit=weightUnit; }
+    const age=parseInt($('age').value,10); if(age>0) w.profile.age=age;
+    w.profile.sex=sex;
+    const act=parseFloat($('activity').value); if(act>=0&&!isNaN(act)) w.profile.activityHrsPerWeek=act;
+    localStorage.setItem(WATER_KEY, JSON.stringify(w));
+    const st=$('settingsStatus');
+    st.textContent='✓ Guardado'; st.style.color='var(--clr-ok)';
+    setTimeout(()=>{ st.textContent=''; }, 1800);
+    actualizarTiles();
   }
 
-  /* ---------- open / close ---------- */
-  function open() { populate(); renderWhoop(); $('settingsBg').classList.add('show'); syncWhoop(); }
-  function close() { $('settingsBg').classList.remove('show'); }
-  $('settingsOpen').addEventListener('click', open);
-  $('settingsClose').addEventListener('click', close);
-  $('settingsBg').addEventListener('click', (e) => { if (e.target === $('settingsBg')) close(); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
-  $('settingsSave').addEventListener('click', save);
-  $('heightUnitSeg').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
-    const cm = getHeightCm(); setHeightUnit(b.dataset.u); fillHeight(cm);
-  }));
-  $('weightUnitSeg').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
-    const v = parseFloat($('weight').value);
-    const kg = v > 0 ? (weightUnit === 'lb' ? v / 2.20462 : v) : null;
-    setWeightUnit(b.dataset.u);
-    if (kg) $('weight').value = weightUnit === 'lb' ? Math.round(kg * 2.20462) : Math.round(kg);
-  }));
-  $('sexSeg').querySelectorAll('button').forEach(b => b.addEventListener('click', () => setSex(b.dataset.s)));
+  function abrirModal() {
+    poblarForm(); renderWhoop(); $('settingsBg').classList.add('show'); syncWhoop();
+  }
+  function cerrarModal() { $('settingsBg').classList.remove('show'); }
 
-  /* ---------- WHOOP ---------- */
-  let whStats = null;
-  function relTime(ts) {
-    if (!ts) return 'never';
-    const s = Math.floor((Date.now() - ts) / 1000);
-    if (s < 60) return 'just now';
-    if (s < 3600) return Math.floor(s/60) + ' min ago';
-    if (s < 86400) return Math.floor(s/3600) + ' h ago';
-    return Math.floor(s/86400) + ' d ago';
+  $('settingsOpen').addEventListener('click', abrirModal);
+  $('settingsClose').addEventListener('click', cerrarModal);
+  $('settingsBg').addEventListener('click', e => { if(e.target===$('settingsBg')) cerrarModal(); });
+  document.addEventListener('keydown', e => { if(e.key==='Escape') cerrarModal(); });
+  $('settingsSave').addEventListener('click', guardar);
+  $('heightUnitSeg').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{ const cm=getHeightCm(); setHeightUnit(b.dataset.u); fillHeight(cm); }));
+  $('weightUnitSeg').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
+    const v=parseFloat($('weight').value);
+    const kg=v>0?(weightUnit==='lb'?v/2.20462:v):null;
+    setWeightUnit(b.dataset.u);
+    if(kg) $('weight').value=weightUnit==='lb'?Math.round(kg*2.20462):Math.round(kg);
+  }));
+  $('sexSeg').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>setSex(b.dataset.s)));
+
+  // ---- WHOOP (idéntico al original, mensajes en español) ----
+  let whStats=null;
+  function tiempoRelativo(ts) {
+    if(!ts) return 'nunca';
+    const s=Math.floor((Date.now()-ts)/1000);
+    if(s<60) return 'justo ahora';
+    if(s<3600) return Math.floor(s/60)+' min atrás';
+    if(s<86400) return Math.floor(s/3600)+' h atrás';
+    return Math.floor(s/86400)+' d atrás';
   }
   function renderWhoop(err) {
-    const t = loadJSON(WHOOP_KEY, null);
-    const statusEl = $('whStatus'), txt = $('whStatusText'), syncEl = $('whSync'), action = $('whAction');
-    if (!t || !t.access) {
-      statusEl.classList.remove('on'); txt.textContent = 'Not connected';
-      syncEl.textContent = ''; $('whStats').style.display = 'none';
-      action.textContent = 'Connect on Health page';
-      return;
+    const t=cargarJSON(WHOOP_KEY,null);
+    const dot=$('whDot'), txt=$('whStatusText'), syncEl=$('whSync'), action=$('whAction');
+    if(!t||!t.access) {
+      dot.classList.remove('on'); txt.textContent='No conectado';
+      syncEl.textContent=''; $('whStats').style.display='none';
+      action.textContent='Conectar en Salud'; return;
     }
-    statusEl.classList.add('on'); txt.textContent = err ? 'Connected (sync failed)' : 'Connected';
-    const last = Number(localStorage.getItem(SYNC_KEY)) || 0;
-    syncEl.textContent = 'Last synced ' + relTime(last);
-    action.textContent = 'Sync now';
-    if (whStats) {
-      $('whStats').style.display = '';
-      $('whRec').textContent   = whStats.rec   != null ? whStats.rec + '%'  : '—';
-      $('whSleep').textContent = whStats.sleep != null ? whStats.sleep + '%' : '—';
-      $('whRhr').textContent   = whStats.rhr   != null ? whStats.rhr         : '—';
+    dot.classList.add('on'); txt.textContent=err?'Conectado (error de sync)':'Conectado';
+    const last=Number(localStorage.getItem(SYNC_KEY))||0;
+    syncEl.textContent='Sincronizado '+tiempoRelativo(last);
+    action.textContent='Sincronizar ahora';
+    if(whStats) {
+      $('whStats').style.display='';
+      $('whRec').textContent  =whStats.rec  !=null?whStats.rec+'%':'—';
+      $('whSleep').textContent=whStats.sleep!=null?whStats.sleep+'%':'—';
+      $('whRhr').textContent  =whStats.rhr  !=null?whStats.rhr:'—';
     }
   }
   async function wRefresh(t) {
-    if (!t.refresh) return null;
+    if(!t.refresh) return null;
     try {
-      const r = await fetch('/api/whoop-refresh', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ refresh_token: t.refresh }) });
-      const j = await r.json();
-      if (j.access_token) { const n = { access:j.access_token, refresh:j.refresh_token||t.refresh, expires:Date.now()+(j.expires_in||3500)*1000 }; saveJSON(WHOOP_KEY, n); return n; }
-    } catch (e) {}
+      const r=await fetch('/api/whoop-refresh',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({refresh_token:t.refresh})});
+      const j=await r.json();
+      if(j.access_token){const n={access:j.access_token,refresh:j.refresh_token||t.refresh,expires:Date.now()+(j.expires_in||3500)*1000};localStorage.setItem(WHOOP_KEY,JSON.stringify(n));return n;}
+    }catch(e){}
     return null;
   }
-  async function wFetch(path, t) {
-    const [p, qs] = path.split('?');
-    const params = new URLSearchParams(qs || ''); params.set('path', p);
-    const r = await fetch('/api/whoop-data?' + params.toString(), { headers: { 'Authorization': 'Bearer ' + t.access, 'Accept':'application/json' } });
-    if (r.status === 401) { const n = await wRefresh(t); if (n) return wFetch(path, n); throw new Error('unauthorized'); }
-    if (!r.ok) throw new Error('whoop ' + r.status);
+  async function wFetch(path,t) {
+    const [p,qs]=path.split('?');
+    const params=new URLSearchParams(qs||''); params.set('path',p);
+    const r=await fetch('/api/whoop-data?'+params.toString(),{headers:{'Authorization':'Bearer '+t.access,'Accept':'application/json'}});
+    if(r.status===401){const n=await wRefresh(t);if(n)return wFetch(path,n);throw new Error('no autorizado');}
+    if(!r.ok) throw new Error('whoop '+r.status);
     return r.json();
   }
   async function syncWhoop() {
-    let t = loadJSON(WHOOP_KEY, null);
-    if (!t || !t.access) return;
-    if (t.expires && Date.now() > t.expires - 60000) { const n = await wRefresh(t); if (n) t = n; }
+    let t=cargarJSON(WHOOP_KEY,null);
+    if(!t||!t.access) return;
+    if(t.expires&&Date.now()>t.expires-60000){const n=await wRefresh(t);if(n)t=n;}
     try {
-      const [rec, sleep] = await Promise.all([
-        wFetch('/recovery?limit=1', t).catch(()=>null),
-        wFetch('/activity/sleep?limit=1', t).catch(()=>null),
+      const [rec,sleep]=await Promise.all([
+        wFetch('/recovery?limit=1',t).catch(()=>null),
+        wFetch('/activity/sleep?limit=1',t).catch(()=>null),
       ]);
-      const r0 = rec && rec.records && rec.records[0];
-      const s0 = sleep && sleep.records && sleep.records[0];
-      whStats = {
-        rec:   r0 && r0.score && r0.score.recovery_score != null ? Math.round(r0.score.recovery_score) : null,
-        rhr:   r0 && r0.score && r0.score.resting_heart_rate != null ? Math.round(r0.score.resting_heart_rate) : null,
-        sleep: s0 && s0.score && s0.score.sleep_performance_percentage != null ? Math.round(s0.score.sleep_performance_percentage) : null,
+      const r0=rec&&rec.records&&rec.records[0];
+      const s0=sleep&&sleep.records&&sleep.records[0];
+      whStats={
+        rec:  r0&&r0.score&&r0.score.recovery_score!=null?Math.round(r0.score.recovery_score):null,
+        rhr:  r0&&r0.score&&r0.score.resting_heart_rate!=null?Math.round(r0.score.resting_heart_rate):null,
+        sleep:s0&&s0.score&&s0.score.sleep_performance_percentage!=null?Math.round(s0.score.sleep_performance_percentage):null,
       };
-      localStorage.setItem(SYNC_KEY, String(Date.now()));
+      localStorage.setItem(SYNC_KEY,String(Date.now()));
       renderWhoop();
-    } catch (e) { renderWhoop(e); }
+    }catch(e){renderWhoop(e);}
   }
-  $('whAction').addEventListener('click', () => {
-    const t = loadJSON(WHOOP_KEY, null);
-    if (!t || !t.access) { window.location.href = 'health.html'; return; }
-    $('whAction').textContent = 'Syncing…'; syncWhoop();
+  $('whAction').addEventListener('click',()=>{
+    const t=cargarJSON(WHOOP_KEY,null);
+    if(!t||!t.access){window.location.href='health.html';return;}
+    $('whAction').textContent='Sincronizando…'; syncWhoop();
   });
+
+  // ---- Lluvia en canvas ----
+  (function(){
+    const mq=window.matchMedia('(prefers-reduced-motion: reduce)');
+    if(mq.matches) return;
+    const canvas=document.getElementById('alfredRain');
+    if(!canvas) return;
+    const ctx=canvas.getContext('2d');
+    function resize(){ canvas.width=window.innerWidth; canvas.height=window.innerHeight; }
+    resize(); window.addEventListener('resize',resize,{passive:true});
+    const gotas=[];
+    for(let i=0;i<60;i++) gotas.push({x:Math.random()*innerWidth,y:Math.random()*innerHeight,len:8+Math.random()*12,vel:1.2+Math.random()*2,op:0.02+Math.random()*0.04});
+    let raf=null;
+    function draw(){
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.strokeStyle='#00d4ff'; ctx.lineWidth=0.7;
+      gotas.forEach(g=>{
+        ctx.globalAlpha=g.op;
+        ctx.beginPath();ctx.moveTo(g.x,g.y);ctx.lineTo(g.x-0.8,g.y+g.len);ctx.stroke();
+        g.y+=g.vel;
+        if(g.y>canvas.height+g.len){g.y=-g.len;g.x=Math.random()*canvas.width;}
+      });
+      ctx.globalAlpha=1;
+      raf=requestAnimationFrame(draw);
+    }
+    draw();
+    document.addEventListener('visibilitychange',()=>{
+      if(document.hidden) cancelAnimationFrame(raf); else draw();
+    });
+  })();
+
 })();
 </script>
 </body>

@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<script src="/api/config"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#05070d">
+<title>Alfred — Acceso</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/alfred.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+/* ============================================================
+   Login — estilos propios de esta pantalla
+   (alfred.css maneja los tokens globales)
+   ============================================================ */
+
+html, body {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Fondo especial del login: luna + niebla */
+.login-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -4;
+  background:
+    radial-gradient(ellipse 70% 60% at 50% 30%,
+      rgba(20, 40, 80, 0.6) 0%,
+      rgba(5, 7, 13, 0.95) 70%,
+      var(--clr-bg) 100%);
+}
+
+/* Luna de fondo */
+.login-moon {
+  position: fixed;
+  top: 5%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(320px, 50vw);
+  height: min(320px, 50vw);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%,
+    rgba(160, 180, 220, 0.12) 0%,
+    rgba(80, 100, 150, 0.06) 40%,
+    transparent 70%);
+  box-shadow:
+    0 0 80px rgba(100, 130, 200, 0.08),
+    0 0 200px rgba(80, 100, 160, 0.05);
+  pointer-events: none;
+  z-index: -3;
+  animation: moonGlow 6s ease-in-out infinite alternate;
+}
+@keyframes moonGlow {
+  from { opacity: 0.7; }
+  to   { opacity: 1; }
+}
+
+/* Contenedor principal del login */
+.login-wrap {
+  width: 100%;
+  max-width: 400px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+  animation: loginEntrada 0.7s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+@keyframes loginEntrada {
+  from { opacity: 0; transform: translateY(24px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Logo / emblema */
+.login-logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+.login-bat {
+  width: 80px;
+  height: 54px;
+  color: var(--clr-cyan);
+  filter: drop-shadow(0 0 16px rgba(0, 212, 255, 0.5));
+  animation: batFloat 5s ease-in-out infinite;
+}
+@keyframes batFloat {
+  0%, 100% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 16px rgba(0, 212, 255, 0.5)); }
+  50%       { transform: translateY(-6px) scale(1.02); filter: drop-shadow(0 0 28px rgba(0, 212, 255, 0.8)); }
+}
+.login-title {
+  font-family: var(--font-display);
+  font-size: clamp(28px, 8vw, 40px);
+  font-weight: 900;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--clr-text-1);
+  text-shadow: 0 0 30px rgba(0, 212, 255, 0.2);
+}
+.login-sub {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--clr-text-3);
+  text-align: center;
+}
+
+/* Panel de formulario */
+.login-card {
+  width: 100%;
+  background: var(--clr-surface);
+  border: var(--border-panel);
+  border-radius: var(--border-radius-lg);
+  padding: 28px 24px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow: var(--shadow-panel);
+  clip-path: polygon(
+    0 10px, 10px 0,
+    calc(100% - 10px) 0, 100% 10px,
+    100% calc(100% - 10px), calc(100% - 10px) 100%,
+    10px 100%, 0 calc(100% - 10px)
+  );
+}
+
+/* Tabs de modo de login */
+.login-tabs {
+  display: flex;
+  margin-bottom: 24px;
+  border: var(--border-panel);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+.login-tab {
+  flex: 1;
+  padding: 10px;
+  background: transparent;
+  border: none;
+  color: var(--clr-text-3);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.login-tab.active {
+  background: rgba(0, 212, 255, 0.1);
+  color: var(--clr-cyan);
+}
+
+/* Campos del formulario */
+.login-field {
+  margin-bottom: 16px;
+}
+.login-field:last-of-type { margin-bottom: 0; }
+
+/* Botón enviar */
+.login-submit {
+  width: 100%;
+  margin-top: 20px;
+  padding: 14px;
+  background: linear-gradient(135deg,
+    rgba(0, 212, 255, 0.18),
+    rgba(0, 150, 200, 0.10));
+  border: 1px solid rgba(0, 212, 255, 0.45);
+  border-radius: var(--border-radius);
+  color: var(--clr-cyan);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all var(--transition);
+  box-shadow: 0 0 16px rgba(0, 212, 255, 0.08);
+  -webkit-tap-highlight-color: transparent;
+}
+.login-submit:hover {
+  background: linear-gradient(135deg,
+    rgba(0, 212, 255, 0.30),
+    rgba(0, 150, 200, 0.18));
+  box-shadow: 0 0 28px rgba(0, 212, 255, 0.22);
+}
+.login-submit:active { transform: scale(0.98); }
+.login-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Mensaje de estado */
+.login-status {
+  min-height: 20px;
+  margin-top: 14px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+.login-status.ok    { color: var(--clr-ok); }
+.login-status.error { color: var(--clr-danger); }
+.login-status.info  { color: var(--clr-cyan); }
+
+/* Separador */
+.login-sep {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0;
+  color: var(--clr-text-3);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+.login-sep::before, .login-sep::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(0, 212, 255, 0.1);
+}
+
+/* Magic link */
+.login-magic-btn {
+  width: 100%;
+  padding: 12px;
+  background: transparent;
+  border: var(--border-panel);
+  border-radius: var(--border-radius);
+  color: var(--clr-text-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.login-magic-btn:hover {
+  border-color: rgba(0, 212, 255, 0.3);
+  color: var(--clr-cyan);
+}
+
+/* Pie del login */
+.login-footer {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--clr-text-3);
+  text-align: center;
+  line-height: 1.8;
+}
+
+/* Responsive: ajuste en pantallas muy pequeñas */
+@media (max-width: 380px) {
+  .login-card { padding: 20px 16px; }
+  .login-wrap { padding: 16px; }
+}
+
+/* Ocultar decoraciones en reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .login-bat { animation: none; }
+  .login-moon { animation: none; }
+  .login-wrap { animation: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- Elementos de fondo -->
+<div class="login-bg" aria-hidden="true"></div>
+<div class="login-moon" aria-hidden="true"></div>
+<div aria-hidden="true">
+  <div class="alfred-glow-orb orb-1"></div>
+  <div class="alfred-glow-orb orb-2"></div>
+</div>
+
+<!-- Canvas de lluvia (ligero, respeta prefers-reduced-motion) -->
+<canvas id="alfredRain" aria-hidden="true"></canvas>
+
+<!-- Contenido principal -->
+<main class="login-wrap" role="main">
+
+  <!-- Logo -->
+  <div class="login-logo">
+    <!-- Emblema murciélago inline -->
+    <svg class="login-bat" viewBox="0 0 120 80" fill="none" aria-hidden="true">
+      <path d="M60 72 C54 72 50 68 48 62 C44 54 44 46 46 38 C48 30 52 24 56 20 L60 16 L64 20 C68 24 72 30 74 38 C76 46 76 54 72 62 C70 68 66 72 60 72 Z" fill="currentColor"/>
+      <path d="M74 38 C80 34 88 28 98 22 C108 16 116 14 118 18 C120 22 114 28 108 34 C102 38 96 40 92 46 C88 52 88 58 84 60 C80 62 76 58 74 50 C72 44 72 40 74 38 Z" fill="currentColor" opacity="0.9"/>
+      <path d="M46 38 C40 34 32 28 22 22 C12 16 4 14 2 18 C0 22 6 28 12 34 C18 38 24 40 28 46 C32 52 32 58 36 60 C40 62 44 58 46 50 C48 44 48 40 46 38 Z" fill="currentColor" opacity="0.9"/>
+      <path d="M54 16 L48 6 L52 14 Z" fill="currentColor" opacity="0.95"/>
+      <path d="M66 16 L72 6 L68 14 Z" fill="currentColor" opacity="0.95"/>
+      <path d="M58 72 L56 78 L60 74 L64 78 L62 72 Z" fill="currentColor" opacity="0.8"/>
+    </svg>
+    <h1 class="login-title">Alfred</h1>
+    <p class="login-sub">Sistema de Control Personal · Acceso Autorizado</p>
+  </div>
+
+  <!-- Tarjeta de login -->
+  <div class="login-card" role="region" aria-label="Formulario de acceso">
+
+    <!-- Tabs: Entrar / Registrarse -->
+    <div class="login-tabs" role="tablist" aria-label="Modo de acceso">
+      <button class="login-tab active" id="tabEntrar" role="tab" aria-selected="true" aria-controls="panelEntrar" type="button">
+        Entrar
+      </button>
+      <button class="login-tab" id="tabRegistrar" role="tab" aria-selected="false" aria-controls="panelRegistrar" type="button">
+        Registrarse
+      </button>
+    </div>
+
+    <!-- Panel: Iniciar sesión -->
+    <div id="panelEntrar" role="tabpanel" aria-labelledby="tabEntrar">
+      <div class="login-field">
+        <label class="hud-field-label" for="loginEmail">Correo electrónico</label>
+        <input
+          class="hud-input"
+          id="loginEmail"
+          type="email"
+          autocomplete="email"
+          placeholder="tu@correo.com"
+          inputmode="email"
+          required
+        >
+      </div>
+      <div class="login-field">
+        <label class="hud-field-label" for="loginPassword">Contraseña</label>
+        <input
+          class="hud-input"
+          id="loginPassword"
+          type="password"
+          autocomplete="current-password"
+          placeholder="••••••••"
+          required
+        >
+      </div>
+      <button class="login-submit" id="btnEntrar" type="button">
+        Acceder al Sistema
+      </button>
+
+      <div class="login-sep">o</div>
+
+      <button class="login-magic-btn" id="btnMagicLink" type="button">
+        Enviar enlace mágico al correo
+      </button>
+    </div>
+
+    <!-- Panel: Registrarse -->
+    <div id="panelRegistrar" role="tabpanel" aria-labelledby="tabRegistrar" hidden>
+      <div class="login-field">
+        <label class="hud-field-label" for="regEmail">Correo electrónico</label>
+        <input
+          class="hud-input"
+          id="regEmail"
+          type="email"
+          autocomplete="email"
+          placeholder="tu@correo.com"
+          inputmode="email"
+          required
+        >
+      </div>
+      <div class="login-field">
+        <label class="hud-field-label" for="regPassword">Contraseña (mínimo 8 caracteres)</label>
+        <input
+          class="hud-input"
+          id="regPassword"
+          type="password"
+          autocomplete="new-password"
+          placeholder="••••••••"
+          minlength="8"
+          required
+        >
+      </div>
+      <div class="login-field">
+        <label class="hud-field-label" for="regPasswordConfirm">Confirmar contraseña</label>
+        <input
+          class="hud-input"
+          id="regPasswordConfirm"
+          type="password"
+          autocomplete="new-password"
+          placeholder="••••••••"
+          required
+        >
+      </div>
+      <button class="login-submit" id="btnRegistrar" type="button">
+        Crear Cuenta
+      </button>
+    </div>
+
+    <!-- Estado del formulario -->
+    <div class="login-status" id="loginStatus" role="alert" aria-live="polite"></div>
+  </div>
+
+  <!-- Pie -->
+  <p class="login-footer" aria-hidden="true">
+    Alfred Dashboard · Sistema Personal<br>
+    Acceso restringido · Gotham City
+  </p>
+
+</main>
+
+<script>
+(function () {
+  'use strict';
+
+  // ---- Configuración de Supabase ----
+  const SUPABASE_URL = (window.DASH_SUPABASE_URL) || '';
+  const SUPABASE_KEY = (window.DASH_SUPABASE_KEY) || '';
+
+  // Si no hay configuración, mostrar aviso
+  if (!SUPABASE_URL || !SUPABASE_KEY) {
+    setStatus('error', 'Sistema no configurado. Contacta al administrador.');
+  }
+
+  // Crear cliente Supabase
+  let supa = null;
+  if (SUPABASE_URL && SUPABASE_KEY && window.supabase) {
+    supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  }
+
+  // ---- Verificar si ya hay sesión ----
+  (async function verificarSesion() {
+    if (!supa) return;
+    try {
+      const { data: { session } } = await supa.auth.getSession();
+      if (session) {
+        // Ya está logueado → redirigir al dashboard
+        const redir = new URLSearchParams(window.location.search).get('redir') || 'index.html';
+        window.location.replace(redir);
+      }
+    } catch (e) {}
+  })();
+
+  // ---- Elementos del DOM ----
+  const tabEntrar    = document.getElementById('tabEntrar');
+  const tabRegistrar = document.getElementById('tabRegistrar');
+  const panelEntrar  = document.getElementById('panelEntrar');
+  const panelRegistrar = document.getElementById('panelRegistrar');
+  const loginStatus  = document.getElementById('loginStatus');
+  const btnEntrar    = document.getElementById('btnEntrar');
+  const btnRegistrar = document.getElementById('btnRegistrar');
+  const btnMagicLink = document.getElementById('btnMagicLink');
+
+  // ---- Tabs ----
+  function activarTab(tab) {
+    const esEntrar = (tab === 'entrar');
+    tabEntrar.classList.toggle('active', esEntrar);
+    tabRegistrar.classList.toggle('active', !esEntrar);
+    tabEntrar.setAttribute('aria-selected', esEntrar ? 'true' : 'false');
+    tabRegistrar.setAttribute('aria-selected', esEntrar ? 'false' : 'true');
+    panelEntrar.hidden    = !esEntrar;
+    panelRegistrar.hidden = esEntrar;
+    limpiarStatus();
+  }
+  tabEntrar.addEventListener('click', () => activarTab('entrar'));
+  tabRegistrar.addEventListener('click', () => activarTab('registrar'));
+
+  // ---- Estado / mensajes ----
+  function setStatus(tipo, msg) {
+    loginStatus.textContent = msg;
+    loginStatus.className = 'login-status ' + tipo;
+  }
+  function limpiarStatus() {
+    loginStatus.textContent = '';
+    loginStatus.className = 'login-status';
+  }
+  function setBusy(btn, ocupado, textoOriginal) {
+    btn.disabled = ocupado;
+    btn.textContent = ocupado ? 'Procesando…' : textoOriginal;
+  }
+
+  // ---- Validaciones ----
+  function validarEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
+  function mensajeError(err) {
+    const msg = (err && err.message) || '';
+    if (msg.includes('Invalid login') || msg.includes('invalid_credentials'))
+      return 'Correo o contraseña incorrectos.';
+    if (msg.includes('Email not confirmed'))
+      return 'Por favor confirma tu correo antes de entrar.';
+    if (msg.includes('User already registered'))
+      return 'Ya existe una cuenta con ese correo. Intenta iniciar sesión.';
+    if (msg.includes('Password should be at least'))
+      return 'La contraseña debe tener al menos 8 caracteres.';
+    if (msg.includes('rate limit') || msg.includes('too many'))
+      return 'Demasiados intentos. Espera unos minutos.';
+    if (msg.includes('network') || msg.includes('fetch'))
+      return 'Sin conexión. Verifica tu internet.';
+    return 'Error: ' + (msg || 'algo salió mal. Intenta de nuevo.');
+  }
+
+  // ---- Iniciar sesión ----
+  btnEntrar.addEventListener('click', async () => {
+    if (!supa) return setStatus('error', 'Sistema no disponible.');
+    const email = document.getElementById('loginEmail').value.trim();
+    const pwd   = document.getElementById('loginPassword').value;
+
+    if (!email || !validarEmail(email)) return setStatus('error', 'Ingresa un correo válido.');
+    if (!pwd) return setStatus('error', 'Ingresa tu contraseña.');
+
+    setBusy(btnEntrar, true, 'Acceder al Sistema');
+    limpiarStatus();
+
+    try {
+      const { error } = await supa.auth.signInWithPassword({ email, password: pwd });
+      if (error) {
+        setStatus('error', mensajeError(error));
+        setBusy(btnEntrar, false, 'Acceder al Sistema');
+        return;
+      }
+      setStatus('ok', '✓ Acceso autorizado. Iniciando sistema…');
+      setTimeout(() => {
+        const redir = new URLSearchParams(window.location.search).get('redir') || 'index.html';
+        window.location.replace(redir);
+      }, 800);
+    } catch (e) {
+      setStatus('error', mensajeError(e));
+      setBusy(btnEntrar, false, 'Acceder al Sistema');
+    }
+  });
+
+  // Enviar con Enter
+  ['loginEmail', 'loginPassword'].forEach(id => {
+    document.getElementById(id).addEventListener('keydown', e => {
+      if (e.key === 'Enter') btnEntrar.click();
+    });
+  });
+
+  // ---- Magic Link ----
+  btnMagicLink.addEventListener('click', async () => {
+    if (!supa) return setStatus('error', 'Sistema no disponible.');
+    const email = document.getElementById('loginEmail').value.trim();
+    if (!email || !validarEmail(email)) return setStatus('error', 'Ingresa tu correo primero.');
+
+    setBusy(btnMagicLink, true, 'Enviar enlace mágico al correo');
+    limpiarStatus();
+
+    try {
+      const { error } = await supa.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: window.location.origin + '/index.html' }
+      });
+      if (error) {
+        setStatus('error', mensajeError(error));
+      } else {
+        setStatus('ok', '✓ Enlace enviado. Revisa tu correo.');
+      }
+    } catch (e) {
+      setStatus('error', mensajeError(e));
+    } finally {
+      setBusy(btnMagicLink, false, 'Enviar enlace mágico al correo');
+    }
+  });
+
+  // ---- Registrarse ----
+  btnRegistrar.addEventListener('click', async () => {
+    if (!supa) return setStatus('error', 'Sistema no disponible.');
+    const email    = document.getElementById('regEmail').value.trim();
+    const pwd      = document.getElementById('regPassword').value;
+    const pwdConf  = document.getElementById('regPasswordConfirm').value;
+
+    if (!email || !validarEmail(email))  return setStatus('error', 'Ingresa un correo válido.');
+    if (!pwd || pwd.length < 8)          return setStatus('error', 'La contraseña debe tener al menos 8 caracteres.');
+    if (pwd !== pwdConf)                 return setStatus('error', 'Las contraseñas no coinciden.');
+
+    setBusy(btnRegistrar, true, 'Crear Cuenta');
+    limpiarStatus();
+
+    try {
+      const { error } = await supa.auth.signUp({
+        email,
+        password: pwd,
+        options: { emailRedirectTo: window.location.origin + '/index.html' }
+      });
+      if (error) {
+        setStatus('error', mensajeError(error));
+        setBusy(btnRegistrar, false, 'Crear Cuenta');
+        return;
+      }
+      setStatus('ok', '✓ Cuenta creada. Revisa tu correo para confirmarla.');
+      setBusy(btnRegistrar, false, 'Crear Cuenta');
+    } catch (e) {
+      setStatus('error', mensajeError(e));
+      setBusy(btnRegistrar, false, 'Crear Cuenta');
+    }
+  });
+
+  ['regEmail', 'regPassword', 'regPasswordConfirm'].forEach(id => {
+    document.getElementById(id).addEventListener('keydown', e => {
+      if (e.key === 'Enter') btnRegistrar.click();
+    });
+  });
+
+  // ---- Lluvia ligera en canvas ----
+  (function initRain() {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (mq.matches) return;
+
+    const canvas = document.getElementById('alfredRain');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let gotas = [];
+
+    function resize() {
+      canvas.width  = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize, { passive: true });
+
+    const NUM_GOTAS = 80;
+    for (let i = 0; i < NUM_GOTAS; i++) {
+      gotas.push({
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * window.innerHeight,
+        len: 8 + Math.random() * 14,
+        vel: 1.5 + Math.random() * 2.5,
+        op:  0.03 + Math.random() * 0.06,
+      });
+    }
+
+    let rafId = null;
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.strokeStyle = '#00d4ff';
+      ctx.lineWidth = 0.8;
+
+      gotas.forEach(g => {
+        ctx.globalAlpha = g.op;
+        ctx.beginPath();
+        ctx.moveTo(g.x, g.y);
+        ctx.lineTo(g.x - 1, g.y + g.len);
+        ctx.stroke();
+
+        g.y += g.vel;
+        if (g.y > canvas.height + g.len) {
+          g.y = -g.len;
+          g.x = Math.random() * canvas.width;
+        }
+      });
+
+      ctx.globalAlpha = 1;
+      rafId = requestAnimationFrame(draw);
+    }
+    draw();
+
+    // Pausar cuando la página no es visible (optimización)
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        cancelAnimationFrame(rafId);
+      } else {
+        draw();
+      }
+    });
+  })();
+
+})();
+</script>
+</body>
+</html>

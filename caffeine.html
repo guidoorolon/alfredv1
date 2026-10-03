@@ -1,12 +1,15 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
-<script src="lock.js"></script>
 <script src="/api/config"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#050506">
-<title>Caffeine · Dashboard</title>
+<title>Alfred — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/alfred.css">
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="sync.js" defer></script>
@@ -14,20 +17,22 @@
 
 <style>
 :root {
-  --text-primary: #FAFAFA;
-  --text-secondary: #B8B6B0;
-  --text-tertiary: #76746E;
-  --success: #6BE3A4;
-  --warning: #F2C063;
-  --danger:  #FF6B6B;
-  --caf: #C9A36B;
-  --energy: #6BE3A4;
-  --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --text-primary: var(--clr-text-1);
+  --text-secondary: var(--clr-text-2);
+  --text-tertiary: var(--clr-text-3);
+  --success: var(--clr-ok);
+  --warning: var(--clr-warn);
+  --danger: var(--clr-danger);
+  --font: var(--font-body);
+  --font-mono: var(--font-mono);
+  --accent: var(--clr-cyan);
+  --bg: var(--clr-bg);
+  --surface: var(--clr-surface);
+  --line: rgba(0, 212, 255, 0.12);
 }
 * { box-sizing: border-box; }
 html, body {
-  margin: 0; padding: 0; background: #050506; color: var(--text-secondary);
+  margin: 0; padding: 0; background: transparent; color: var(--text-secondary);
   font-family: var(--font); -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
 }
@@ -185,7 +190,7 @@ body::after {
 <body>
 <div class="page">
 
-  <h1 class="dash-title">Caffeine</h1>
+  <h1 class="dash-title">Cafeína</h1>
 
   <!-- ENERGY CURVE -->
   <div class="section">
@@ -242,7 +247,7 @@ body::after {
 
   <!-- DAILY INTAKE BAR -->
   <div class="section">
-    <div class="section-title">Today</div>
+    <div class="section-title">Hoy</div>
     <div class="gm-card">
       <div class="daily-top">
         <span class="daily-num" id="dailyNum">0</span>
@@ -265,7 +270,7 @@ body::after {
       <div class="custom-row">
         <input class="gm-input" id="customName" type="text" placeholder="Custom drink name" autocomplete="off">
         <input class="gm-input mg-input" id="customMg" type="number" min="0" placeholder="mg" autocomplete="off">
-        <button class="gm-add" id="customAdd" type="button">Add</button>
+        <button class="gm-add" id="customAdd" type="button">Añadir</button>
       </div>
     </div>
   </div>
@@ -636,6 +641,13 @@ body::after {
       onApplied:function(){ logs=loadJSON(LOGS_KEY,[]); custom=loadJSON(CUSTOM_KEY,[]); renderResults($('search').value); renderAll(); } });
   }
 })();
+</script>
+<script>
+window.addEventListener('DOMContentLoaded', async () => {
+  if (typeof window.requireAuth === 'function') {
+    await window.requireAuth();
+  }
+});
 </script>
 </body>
 </html>

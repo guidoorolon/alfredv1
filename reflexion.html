@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<script src="/api/config"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#05070d">
+<title>Alfred — Reflexión</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/alfred.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="sync.js" defer></script>
+<script src="topbar.js" defer></script>
+
+<style>
+/* Estilos para Reflexión */
+html, body { height: 100%; }
+.alfred-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  max-width: 800px;
+  padding-bottom: calc(88px + env(safe-area-inset-bottom));
+}
+
+.reflexion-header {
+  margin-bottom: 24px;
+}
+
+.chat-container {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  scrollbar-width: none;
+}
+.chat-container::-webkit-scrollbar { display: none; }
+
+.chat-input-area {
+  padding-top: 16px;
+  background: var(--clr-bg);
+  position: sticky;
+  bottom: 0;
+}
+
+.controls-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.btn-mic {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1px solid var(--clr-cyan);
+  background: rgba(0, 212, 255, 0.1);
+  color: var(--clr-cyan);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.btn-mic.recording {
+  background: rgba(255, 68, 102, 0.2);
+  border-color: var(--clr-danger);
+  color: var(--clr-danger);
+  animation: micPulse 1.5s infinite;
+}
+@keyframes micPulse {
+  0% { box-shadow: 0 0 0 0 rgba(255, 68, 102, 0.4); }
+  70% { box-shadow: 0 0 0 15px rgba(255, 68, 102, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 68, 102, 0); }
+}
+
+.mic-status {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--clr-text-3);
+  text-transform: uppercase;
+  flex: 1;
+}
+
+/* Historial modal (oculto por defecto) */
+#historialModal .modal {
+  max-width: 600px;
+}
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.history-item {
+  background: rgba(0, 212, 255, 0.03);
+  border: 1px solid rgba(0, 212, 255, 0.1);
+  padding: 12px;
+  border-radius: var(--border-radius);
+}
+.history-date {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--clr-cyan);
+  margin-bottom: 8px;
+}
+</style>
+</head>
+<body>
+
+<div aria-hidden="true">
+  <div class="alfred-glow-orb orb-1"></div>
+  <div class="alfred-glow-orb orb-2"></div>
+</div>
+
+<main class="alfred-page">
+  <div class="reflexion-header flex-between">
+    <div>
+      <h1 class="alfred-title">Reflexión</h1>
+      <p class="alfred-subtitle">Registro y Análisis Personal</p>
+    </div>
+    <button class="btn btn-sm" id="btnHistorial" type="button">Historial</button>
+  </div>
+
+  <div class="chat-container alfred-chat-feed" id="feed" role="log" aria-live="polite">
+    <div class="alfred-msg alfred">
+      <div class="alfred-bubble">
+        <span class="alfred-chat-tag">Alfred</span>
+        <div>Buenas noches, señor German. Este es su espacio privado. ¿Hay algo en su mente que desee compartir hoy? Lo escucho.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="chat-input-area">
+    <div class="alfred-composer">
+      <textarea id="chatInput" class="alfred-composer-input" placeholder="Escriba aquí o grabe su voz..." rows="2"></textarea>
+      <button id="sendBtn" class="alfred-composer-send" aria-label="Enviar" type="button">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"></line>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+        </svg>
+      </button>
+    </div>
+    <div class="controls-row">
+      <button id="micBtn" class="btn-mic" type="button" aria-label="Grabar audio" title="Grabar audio con Whisper">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+          <line x1="12" y1="19" x2="12" y2="22"></line>
+        </svg>
+      </button>
+      <span id="micStatus" class="mic-status">Listo</span>
+    </div>
+  </div>
+</main>
+
+<!-- Modal Historial -->
+<div class="modal-bg" id="historialBg" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="modal-title">Historial de Reflexiones</span>
+      <button class="modal-close" id="historialClose" type="button">×</button>
+    </div>
+    <div class="history-list" id="historyList">
+      Cargando...
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  let supaClient = null;
+  let supabaseToken = null;
+  let userId = null;
+
+  const feed = document.getElementById('feed');
+  const input = document.getElementById('chatInput');
+  const btnSend = document.getElementById('sendBtn');
+  const btnMic = document.getElementById('micBtn');
+  const micStatus = document.getElementById('micStatus');
+
+  let historialChat = []; 
+  let isBusy = false;
+
+  let mediaRecorder = null;
+  let audioChunks = [];
+
+  window.addEventListener('DOMContentLoaded', async () => {
+    if (typeof window.requireAuth === 'function') {
+      const session = await window.requireAuth();
+      if (session) {
+        supabaseToken = session.access_token;
+        userId = session.user.id;
+        const url = window.DASH_SUPABASE_URL;
+        const key = window.DASH_SUPABASE_KEY;
+        supaClient = window.supabase.createClient(url, key);
+      }
+    }
+  });
+
+  function escapeHtml(text) {
+    const map = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;' };
+    return String(text).replace(/[&<>"']/g, m => map[m]);
+  }
+  
+  function renderMarkdown(text) {
+    let out = escapeHtml(text);
+    out = out.replace(/\r?\n/g, '<br>');
+    return out.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  }
+
+  function appendUserMsg(text) {
+    const el = document.createElement('div');
+    el.className = 'alfred-msg usuario';
+    el.innerHTML = '<div class="alfred-bubble">' + escapeHtml(text) + '</div>';
+    feed.appendChild(el);
+    feed.scrollTop = feed.scrollHeight;
+  }
+
+  function appendAlfredMsgHTML(htmlContent) {
+    const el = document.createElement('div');
+    el.className = 'alfred-msg alfred';
+    el.innerHTML = '<div class="alfred-bubble"><span class="alfred-chat-tag">Alfred</span><div class="content-div">' + htmlContent + '</div></div>';
+    feed.appendChild(el);
+    feed.scrollTop = feed.scrollHeight;
+    return el.querySelector('.content-div');
+  }
+
+  // ---- Envío de texto y respuesta de Alfred ----
+  async function sendMsg(text, esTranscripcion = false) {
+    text = text.trim();
+    if (!text || isBusy) return;
+
+    if (!supabaseToken) {
+      appendAlfredMsgHTML('Error de sesión.'); return;
+    }
+
+    isBusy = true;
+    input.value = '';
+    appendUserMsg(text);
+    historialChat.push({ role: 'user', content: text });
+
+    const contentDiv = appendAlfredMsgHTML('<span class="alfred-dots"><i></i><i></i><i></i></span>');
+
+    try {
+      const response = await fetch('/api/alfred', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: supabaseToken,
+          messages: historialChat,
+          contexto: {}, // no mandamos contexto rígido a reflexión
+          modo: 'reflexion'
+        })
+      });
+
+      if (!response.ok) throw new Error('API Error');
+
+      contentDiv.innerHTML = '';
+      let alfredFullReply = '';
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const dataStr = line.slice(6).trim();
+            if (dataStr === '[DONE]') continue;
+            try {
+              const obj = JSON.parse(dataStr);
+              if (obj.texto) {
+                alfredFullReply += obj.texto;
+                contentDiv.innerHTML = renderMarkdown(alfredFullReply);
+                feed.scrollTop = feed.scrollHeight;
+              }
+            } catch (e) { }
+          }
+        }
+      }
+
+      historialChat.push({ role: 'assistant', content: alfredFullReply });
+
+      // Guardar en Supabase (tabla reflections)
+      if (supaClient && userId) {
+        await supaClient.from('reflections').insert({
+          user_id: userId,
+          texto: text,
+          transcripcion: esTranscripcion ? text : null,
+          resumen: alfredFullReply,
+          fuente: esTranscripcion ? 'voz' : 'texto'
+        });
+      }
+
+    } catch(err) {
+      contentDiv.innerHTML = 'Disculpe, señor. La conexión falló.';
+    }
+
+    isBusy = false;
+  }
+
+  btnSend.addEventListener('click', () => sendMsg(input.value));
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMsg(input.value);
+    }
+  });
+
+  // ---- Grabación de Audio ----
+  btnMic.addEventListener('click', async () => {
+    if (isBusy) return;
+    
+    // Si ya estamos grabando, detener
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+      mediaRecorder.stop();
+      btnMic.classList.remove('recording');
+      micStatus.textContent = "Procesando...";
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
+      audioChunks = [];
+
+      mediaRecorder.addEventListener("dataavailable", event => {
+        audioChunks.push(event.data);
+      });
+
+      mediaRecorder.addEventListener("stop", async () => {
+        stream.getTracks().forEach(track => track.stop());
+        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        await transcribirAudio(audioBlob);
+      });
+
+      mediaRecorder.start();
+      btnMic.classList.add('recording');
+      micStatus.textContent = "Grabando... Presione para detener";
+    } catch (e) {
+      console.error(e);
+      alert("No se pudo acceder al micrófono.");
+    }
+  });
+
+  async function transcribirAudio(blob) {
+    isBusy = true;
+    micStatus.textContent = "Transcribiendo (Whisper)...";
+    
+    const formData = new FormData();
+    formData.append('audio', blob, 'registro.webm');
+    formData.append('token', supabaseToken);
+
+    try {
+      const res = await fetch('/api/transcribe', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      
+      if (!res.ok) throw new Error(data.error || 'Error en transcripción');
+      
+      micStatus.textContent = "Listo";
+      isBusy = false;
+      
+      if (data.transcripcion) {
+        sendMsg(data.transcripcion, true);
+      }
+    } catch (err) {
+      isBusy = false;
+      micStatus.textContent = "Error al transcribir";
+      console.error(err);
+    }
+  }
+
+  // ---- Historial ----
+  document.getElementById('btnHistorial').addEventListener('click', async () => {
+    document.getElementById('historialBg').classList.add('show');
+    const container = document.getElementById('historyList');
+    container.innerHTML = 'Cargando...';
+    
+    if (supaClient && userId) {
+      const { data, error } = await supaClient
+        .from('reflections')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(20);
+        
+      if (error) {
+        container.innerHTML = 'Error al cargar';
+      } else if (data.length === 0) {
+        container.innerHTML = 'No hay reflexiones guardadas.';
+      } else {
+        container.innerHTML = data.map(item => `
+          <div class="history-item">
+            <div class="history-date">${new Date(item.created_at).toLocaleString('es-ES')} (${item.fuente})</div>
+            <p><strong>Usted:</strong> ${escapeHtml(item.texto)}</p>
+            <p class="mt-sm" style="color:var(--clr-purple)"><strong>Alfred:</strong> ${escapeHtml(item.resumen || '')}</p>
+          </div>
+        `).join('');
+      }
+    }
+  });
+  
+  document.getElementById('historialClose').addEventListener('click', () => {
+    document.getElementById('historialBg').classList.remove('show');
+  });
+
+})();
+</script>
+</body>
+</html>

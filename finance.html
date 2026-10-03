@@ -1,45 +1,33 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
-<script src="lock.js"></script>
 <script src="/api/config"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#0a0a0b">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Finances</title>
+<title>Alfred — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/alfred.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="sync.js" defer></script>
 <script src="topbar.js" defer></script>
 <style>
 :root {
-  --bg: #0A0A0B;
-  --bg-deep: #050506;
-  --bg-card: rgba(255, 255, 255, 0.04);
-  --bg-secondary: rgba(255, 255, 255, 0.035);
-  --glass-bg: rgba(255, 255, 255, 0.04);
-  --glass-border: transparent;
-  --glass-border-strong: transparent;
-  --glass-shadow:
-    0 1px 0 0 rgba(255, 255, 255, 0.06) inset,
-    0 12px 40px rgba(0, 0, 0, 0.45),
-    0 1px 2px rgba(0, 0, 0, 0.25);
-  --text-primary: #FAFAFA;
-  --text-secondary: #B8B6B0;
-  --text-tertiary: #76746E;
-  --text-quaternary: #4D4B47;
-  --border: transparent;
-  --border-soft: transparent;
-  --accent: #E07658;
-  --success: #6BE3A4;
-  --warning: #F2C063;
-  --danger: #FF6B6B;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  color-scheme: dark;
+  --text-primary: var(--clr-text-1);
+  --text-secondary: var(--clr-text-2);
+  --text-tertiary: var(--clr-text-3);
+  --success: var(--clr-ok);
+  --warning: var(--clr-warn);
+  --danger: var(--clr-danger);
+  --font: var(--font-body);
+  --font-mono: var(--font-mono);
+  --accent: var(--clr-cyan);
+  --bg: var(--clr-bg);
+  --surface: var(--clr-surface);
+  --line: rgba(0, 212, 255, 0.12);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -258,7 +246,7 @@ html, body { scrollbar-width: none; -ms-overflow-style: none; }
   flex-shrink: 0;
   background: rgba(255,255,255,0.30);
 }
-.tag-green::before { background: #6BE3A4; box-shadow: 0 0 6px rgba(107,227,164,0.55); }
+.tag-green::before { background: transparent; box-shadow: 0 0 6px rgba(107,227,164,0.55); }
 .tag-green { background: rgba(107, 227, 164, 0.10); color: #8EE9B7; }
 .pill-group { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
 
@@ -1072,9 +1060,9 @@ html, body { scrollbar-width: none; -ms-overflow-style: none; }
   height: 100%; border-radius: 3px;
   transition: width 0.3s ease;
 }
-.wish-row-bar-fill.good { background: #6BE3A4; box-shadow: 0 0 6px rgba(107,227,164,0.5); }
-.wish-row-bar-fill.warn { background: #F2C063; box-shadow: 0 0 6px rgba(242,192,99,0.5); }
-.wish-row-bar-fill.bad  { background: #FF8A8A; box-shadow: 0 0 6px rgba(255,138,138,0.5); }
+.wish-row-bar-fill.good { background: transparent; box-shadow: 0 0 6px rgba(107,227,164,0.5); }
+.wish-row-bar-fill.warn { background: transparent; box-shadow: 0 0 6px rgba(242,192,99,0.5); }
+.wish-row-bar-fill.bad  { background: transparent; box-shadow: 0 0 6px rgba(255,138,138,0.5); }
 .wish-row-bar-fill.flat { background: rgba(255,255,255,0.20); }
 
 /* ============================================================
@@ -1167,8 +1155,8 @@ html, body { scrollbar-width: none; -ms-overflow-style: none; }
   background: rgba(255,255,255,0.18);
   transition: background 0.2s;
 }
-.ticker-dot.active { background: #6BE3A4; }
-.finance-ticker.urgent .ticker-dot.active { background: #FF8A8A; }
+.ticker-dot.active { background: transparent; }
+.finance-ticker.urgent .ticker-dot.active { background: transparent; }
 
 /* ============================================================
    DEDUCT-FROM-NW BUTTON & CHOOSER (in order cards)
@@ -1497,15 +1485,15 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   top: 2px; left: 2px;
   width: 12px; height: 12px;
   border-radius: 50%;
-  background: #FAFAFA;
+  background: transparent;
   transition: transform 0.2s, background 0.2s;
 }
 .sub-auto-toggle input:checked ~ .sub-auto-track {
-  background: #6BE3A4;
+  background: transparent;
 }
 .sub-auto-toggle input:checked ~ .sub-auto-track .sub-auto-thumb {
   transform: translateX(14px);
-  background: #04201A;
+  background: transparent;
 }
 .sub-auto-toggle input:checked ~ .sub-auto-label {
   color: #6BE3A4;
@@ -1548,7 +1536,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   background: rgba(255,255,255,0.25);
 }
 .sub-row-toggle.is-on .sub-row-toggle-dot {
-  background: #6BE3A4;
+  background: transparent;
   box-shadow: 0 0 6px rgba(107,227,164,0.7);
 }
 
@@ -1578,7 +1566,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 <!-- ===== BACK BUTTON ===== -->
 <a href="index.html" class="fin-back-btn" aria-label="Back to dashboard">
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
-  <span>Back</span>
+  <span>Volver</span>
 </a>
 
 <!-- ===== FINANCE TICKER (rotating subscription renewals) ===== -->
@@ -1872,7 +1860,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 <nav class="bottom-tabs" id="bottomTabs" aria-label="Sections">
   <button class="bot-tab active" data-tab="net">
     <span class="bot-tab-icon">📊</span>
-    <span class="bot-tab-label">Net Worth</span>
+    <span class="bot-tab-label">Patrimonio</span>
   </button>
   <button class="bot-tab" data-tab="subs">
     <span class="bot-tab-icon">🔁</span>
@@ -2679,8 +2667,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       '<label class="date-field" style="min-width:140px"><span class="date-emoji" aria-hidden="true">📅</span><input type="date" class="se-ren" value="' + (it.renewal && /^\d{4}-\d{2}-\d{2}/.test(it.renewal) ? it.renewal.slice(0,10) : '') + '" /></label>' +
       '<select class="se-from" style="padding:6px 10px;border:0.5px solid rgba(255,255,255,0.10);border-radius:var(--radius-md);font-size:12px;font-family:inherit;background:var(--bg-card);color:var(--text-primary);min-width:130px">' + fromOpts + '</select>' +
       '<label class="sub-auto-toggle" style="padding:6px 10px"><input type="checkbox" class="se-auto"' + (it.autoDeduct ? ' checked' : '') + ' /><span class="sub-auto-track"><span class="sub-auto-thumb"></span></span><span class="sub-auto-label">Auto-deduct</span></label>' +
-      '<button class="se-save quick-add-btn">Save</button>' +
-      '<button class="se-cancel" style="background:transparent;border:1px solid rgba(255,255,255,0.10);color:var(--text-tertiary);cursor:pointer;font-size:12px;padding:6px 10px;border-radius:var(--radius-md);font-family:inherit">Cancel</button>';
+      '<button class="se-save quick-add-btn">Guardar</button>' +
+      '<button class="se-cancel" style="background:transparent;border:1px solid rgba(255,255,255,0.10);color:var(--text-tertiary);cursor:pointer;font-size:12px;padding:6px 10px;border-radius:var(--radius-md);font-family:inherit">Cancelar</button>';
     row.appendChild(form);
     const save = () => {
       const newName = row.querySelector('.se-name').value.trim();
@@ -3394,5 +3382,12 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 
+<script>
+window.addEventListener('DOMContentLoaded', async () => {
+  if (typeof window.requireAuth === 'function') {
+    await window.requireAuth();
+  }
+});
+</script>
 </body>
 </html>

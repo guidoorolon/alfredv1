@@ -1,9 +1,13 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Avatar Lab · Nova</title>
+<title>Alfred — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/alfred.css">
 <!-- ============================================================
  * AVATAR LAB — local playground for the Nova avatar.
  * Pick colors, try 5 designs, preview idle / thinking / happy,
@@ -13,10 +17,18 @@
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  --c1: #6EE7B7;   /* primary / light */
-  --c2: #67E8F9;   /* secondary / glow */
-  --c3: #1f8f66;   /* deep / shadow   */
-  --bg: #05060c; --fg: #e9ecf5; --muted: rgba(233,236,245,.55); --line: rgba(255,255,255,.1);
+  --text-primary: var(--clr-text-1);
+  --text-secondary: var(--clr-text-2);
+  --text-tertiary: var(--clr-text-3);
+  --success: var(--clr-ok);
+  --warning: var(--clr-warn);
+  --danger: var(--clr-danger);
+  --font: var(--font-body);
+  --font-mono: var(--font-mono);
+  --accent: var(--clr-cyan);
+  --bg: var(--clr-bg);
+  --surface: var(--clr-surface);
+  --line: rgba(0, 212, 255, 0.12);
 }
 html, body { background: var(--bg); }
 body { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; color: var(--fg); min-height: 100vh; }
@@ -78,7 +90,7 @@ header .role { font-family: ui-monospace, monospace; font-size: 10px; letter-spa
   box-shadow: 0 0 26px -2px var(--c1), inset 0 -7px 16px rgba(0,0,0,.28);
   animation: floatY 4s ease-in-out infinite; }
 .av--orb::before, .av--orb::after { content:''; position:absolute; top:38%; width:14%; height:14%; border-radius:50%;
-  background:#06281d; box-shadow:0 0 6px rgba(0,0,0,.4); transition:height .15s; }
+  background: transparent; box-shadow:0 0 6px rgba(0,0,0,.4); transition:height .15s; }
 .av--orb::before { left:30%; } .av--orb::after { right:30%; }
 [data-state=think] .av--orb { animation: floatY 1.1s ease-in-out infinite, glowPulse 1.1s ease-in-out infinite; }
 [data-state=happy] .av--orb::before, [data-state=happy] .av--orb::after { height:6%; border-radius:0 0 9px 9px; }
@@ -106,7 +118,7 @@ header .role { font-family: ui-monospace, monospace; font-size: 10px; letter-spa
   border-radius: 42% 58% 60% 40% / 50% 45% 55% 50%;
   animation: morph 6s ease-in-out infinite, floatY 5s ease-in-out infinite; }
 .av--blob::before, .av--blob::after { content:''; position:absolute; top:42%; width:13%; height:18%; border-radius:50%;
-  background:#06281d; transition:height .15s; }
+  background: transparent; transition:height .15s; }
 .av--blob::before { left:32%; } .av--blob::after { right:32%; }
 [data-state=think] .av--blob { animation: morph 1.8s ease-in-out infinite, floatY 1.4s ease-in-out infinite; }
 [data-state=happy] .av--blob::before, [data-state=happy] .av--blob::after { height:7%; top:46%; border-radius:0 0 8px 8px; }
@@ -118,7 +130,7 @@ header .role { font-family: ui-monospace, monospace; font-size: 10px; letter-spa
 .av--bot::before { content:''; position:absolute; left:50%; top:-22%; transform:translateX(-50%);
   width:8%; height:24%; background:var(--c2); border-radius:99px; box-shadow:0 -3px 0 0 var(--c2), 0 0 10px var(--c2); }
 .av--bot .face { position:absolute; inset:24% 18%; display:flex; align-items:center; justify-content:space-between; }
-.av--bot .face b { width:24%; height:55%; border-radius:99px; background:#06281d; box-shadow:0 0 8px var(--c2) inset; transition:.15s; animation: blink 4.2s infinite; }
+.av--bot .face b { width:24%; height:55%; border-radius:99px; background: transparent; box-shadow:0 0 8px var(--c2) inset; transition:.15s; animation: blink 4.2s infinite; }
 [data-state=think] .av--bot .face b { animation: blink 1.1s infinite; }
 [data-state=happy] .av--bot .face b { height:24%; border-radius:0 0 99px 99px; }
 
@@ -265,7 +277,20 @@ header .role { font-family: ui-monospace, monospace; font-size: 10px; letter-spa
   function showToast(msg){ toast.textContent = msg; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'), 1600); }
 
   function cssFor(id){
-    const vars = `:root{\n  --c1: ${c1.value};\n  --c2: ${c2.value};\n  --c3: ${c3.value};\n}`;
+    const vars = `:root {
+  --text-primary: var(--clr-text-1);
+  --text-secondary: var(--clr-text-2);
+  --text-tertiary: var(--clr-text-3);
+  --success: var(--clr-ok);
+  --warning: var(--clr-warn);
+  --danger: var(--clr-danger);
+  --font: var(--font-body);
+  --font-mono: var(--font-mono);
+  --accent: var(--clr-cyan);
+  --bg: var(--clr-bg);
+  --surface: var(--clr-surface);
+  --line: rgba(0, 212, 255, 0.12);
+};\n  --c2: ${c2.value};\n  --c3: ${c3.value};\n}`;
     const sheet = document.styleSheets[0];
     const want = ['.av ', '.av--'+id, '@keyframes floatY','@keyframes glowPulse','@keyframes spin','@keyframes morph','@keyframes blink','@keyframes pop'];
     const rules = [];
@@ -290,6 +315,13 @@ header .role { font-family: ui-monospace, monospace; font-size: 10px; letter-spa
     showToast(btn.dataset.id + ' CSS copied');
   });
 })();
+</script>
+<script>
+window.addEventListener('DOMContentLoaded', async () => {
+  if (typeof window.requireAuth === 'function') {
+    await window.requireAuth();
+  }
+});
 </script>
 </body>
 </html>
